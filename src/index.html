@@ -8,19 +8,26 @@
 
 </textarea>
 <button id="dosomething" onClick=dosomething()>press me</button>
+<button id="fred" onClick=somethinghappened()>Press me as well</button>
 
 <!-- Load d3.js -->
 <head>
 <script src="https://d3js.org/d3.v4.js"></script>
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
 
+<script src="render.js"></script>
 <style>
 
 </style>
 </head>
 <body>
   <br>
+  <svg id="githubstyle" width="1500" height="500"></svg>
+
+<div id="div_template"></div>
 
 <svg id="dateDemo1" width="1000" height="250"></svg>
+
 </body>
 </html>
 
@@ -37,212 +44,6 @@
 }
 </style>
 
-<script>
-  function drawDemo5() {
 
-    var tooltip = d3.select("body").append("div")
-                  .attr("class", "tooltip")
-                  .style("opacity", 0);
-
-    var data = [
-      {"date": "Apr 1, 1970", "event": "A"},
-      {"date": "Jun 15, 1971", "event": "B"},
-      {"date": "Mar 30, 1972", "event": "C"},
-      {"date": "Jan 1, 1973", "event": "D"},
-      {"date": "Jun 15, 1973", "event": "E"}
-    ];
-
-    var parseTime = d3.timeParse("%b %d, %Y");
-
-    var dates = [];
-    for (let obj of data) {
-        dates.push(parseTime(obj.date));
-    }
-
-    var domain = d3.extent(dates);
-    domain = [d3.timeYear.floor(domain[0]), d3.timeYear.ceil(domain[1])];
-
-    var xScale = d3.scaleTime()
-          .domain(domain)
-          .range([25, 555]);
-
-    var xAxis = d3.axisBottom(xScale);
-
-    var svg = d3.select("#dateDemo5");
-
-    svg.append("g")
-        .attr("transform", "translate(0,60)")
-        .call(xAxis.ticks(d3.timeMonth));
-
-    svg.selectAll(".tick text").remove();
-
-    svg.append("g")
-        .attr("transform", "translate(0,60)")
-        .call(xAxis.ticks(d3.timeYear));
-
-    svg.append("text")
-        .attr("transform", "translate(300,95)")
-        .style("text-anchor", "middle")
-        .attr("fill", "black")
-        .text("Dates");
-
-    svg.selectAll("circle")
-      .data(data)
-      .enter()
-      .append("circle")
-      .attr("r", 7)
-      .attr("fill", "black")
-      .attr("cx", (d) => xScale(parseTime(d.date)))
-      .attr("cy", 50)
-      .on("mouseover", function(d) {
-                          tooltip.transition()
-                              .duration(200)
-                              .style("opacity", .9);
-                          tooltip.html(d.date)
-                              .style("left", (d3.event.pageX) + "px")
-                              .style("top", (d3.event.pageY - 28) + "px");
-                      })
-      .on("mouseout", function(d) {
-                          tooltip.transition()
-                              .duration(500)
-                              .style("opacity", 0);
-      });
-  }
-
-  drawDemo5();
-</script>
-
-<svg id="dateDemo5" width="580" height="100"></svg>
-
-<script>
-Date.prototype.getWeekNumber = function(){
-  var d = new Date(Date.UTC(this.getFullYear(), this.getMonth(), this.getDate()));
-  var dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1)/7)
-};
-
-Date.prototype.toDayKey = function() {
-  let d = new Date(Date.UTC(this.getFullYear(), this.getMonth(), this.getDate()));
-  return d.toISOString();
-}
-
-
-var x = new Map();
-function addData(data) {
-  // data is in internal format
-  for (const dat of data) {
-    const d = dat.ts;
-    if (x.has(d.toDayKey())) {
-      // x.set(d.toDayKey(), x.get(d.toDayKey()).push(dat));
-      x.get(d.toDayKey()).push(dat);
-    } else {
-      x.set(d.toDayKey(), [dat]);
-
-    }
-  }
-  
-}
-
-function sortAll() {
-
-  x = new Map([...x.entries()].sort());
-  for (let z of x.keys()) {
-    x.set(z,x.get(z).sort());
-  }
-  console.log(x);
-
-}
-
-function dosomething() {
-  let data = Array.from(x, ([date, value]) => ({ date, value }));
-  let dom = d3.extent(data.map(d => new Date(d.date)));
-
-  console.log(data);
-  console.log(dom);
-  var xScale = d3.scaleTime()
-    .domain(dom)
-    .range([25, 975]);
-  // console.log(xScale);
-
-  var yScale = d3.scaleLinear()
-    .domain([0,86400000])
-    .range([0,50]);
-
-  var xAxis = d3.axisBottom(xScale);
-
-  var yAxis = d3.axisLeft(yScale);
-
-  var svg = d3.select("#dateDemo1");
-
-  svg.append("g")
-    .attr("transform", "translate(0,60)")
-    .call(xAxis);
-    // .call(yAxis);
-
-  console.log(xScale(new Date(data[1].date)));
-  console.log(data[1].date);
-  console.log(data[1].value.reduce((ac, cv) => ac + cv.ms_played,0));
-
-  svg.selectAll("rect")
-    .data(data)
-    .enter()
-    .append("rect")
-      .attr("fill", "black")
-      .attr("width","1")
-      .attr("height", (d) => yScale(d.value.reduce((ac, cv) => ac + cv.ms_played,0)))
-      .attr("x", (d) => xScale(new Date(d.date)))
-      .attr("y", (d) => 50 - yScale(d.value.reduce((ac, cv) => ac + cv.ms_played,0)))
-  // svg.selectAll("circle")
-  //   .data(data)
-  //   .enter()
-  //   .append("circle")
-  //   .attr("r", 7)
-  //   .attr("fill", "black")
-  //   .attr("cx", (d) => xScale(new Date(d.date)))
-  //   .attr("cy", 50)
-
-}
-
-
-// function to parse EXTENDED streaming data
-document.getElementById('import').onclick = function() {
-	var files = document.getElementById('selectFiles').files;
-  if (files.length <= 0) {
-    return false;
-  }
-  for (const file of files) {
-  var fr = new FileReader();
-
-  // convert to internal format
-  function convert(val) {
-    let dd = new Date(val.ts);
-    var obj = {
-      ts:dd,
-      ms_played:val.ms_played,
-      track:val.master_metadata_track_name,
-      artist: val.master_metadata_album_artist_name,
-    };
-    return obj;
-  }
-
-
-  fr.onload = function(e) {
-    var result = JSON.parse(e.target.result);
-	  result = result.map(convert);
-    var formatted = JSON.stringify(result[0], null, 2);
-    addData(result);
-    if (result.some(r => r.ts == null)) {
-      console.log("something doesnt have a ts!");
-    }
-  	document.getElementById('result').value = formatted;
-    sortAll();
-
-  }
-    fr.readAsText(file);
-  }
-};
-</script>
 
 <!-- {"ts":"2022-07-06T15:31:07Z","username":"zrb0q5h7mcudzxzh1dp2zvlsl","platform":"OS X 12.3.1 [arm 2]","ms_played":174586,"conn_country":"US","ip_addr_decrypted":"24.147.161.98","user_agent_decrypted":"unknown","master_metadata_track_name":"this is how you fall in love","master_metadata_album_artist_name":"Jeremy Zucker","master_metadata_album_album_name":"brent ii","spotify_track_uri":"spotify:track:1aEsTgCsv8nOjEgyEoRCpS","episode_name":null,"episode_show_name":null,"spotify_episode_uri":null,"reason_start":"trackdone","reason_end":"trackdone","shuffle":true,"skipped":null,"offline":false,"offline_timestamp":1657121291664,"incognito_mode":false} -->
