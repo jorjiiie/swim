@@ -11,7 +11,8 @@ Date.prototype.toDayKey = function() {
   return d.toISOString();
 }
 
-
+var years = new Set();
+var currentYear = 2022;
 var x = new Map();
 function addData(data) {
   // data is in internal format
@@ -27,13 +28,27 @@ function addData(data) {
   }
   
 }
+const menu = document.getElementById("changeYear");
+menu.addEventListener("change", function() {
+  console.log(`Selected option: ${this.value}`);
+  currentYear = this.value;
+});
 
 function sortAll() {
 
   x = new Map([...x.entries()].sort());
   for (let z of x.keys()) {
+  	years.add(new Date(z).getFullYear());
     x.set(z,x.get(z).sort());
   }
+  while(menu.options.length > 0)
+  	menu.remove(0);
+  years.forEach(function(year) {
+  	const newOption = document.createElement("option");
+	newOption.value = year;
+	newOption.text = year;
+	menu.add(newOption);
+  });
   console.log(x);
 
 }
@@ -112,7 +127,7 @@ document.getElementById('import').onclick = function() {
       console.log("something doesnt have a ts!");
     }
   	document.getElementById('result').value = formatted;
-    sortAll();
+  	sortAll();
 
   }
     fr.readAsText(file);
@@ -120,114 +135,26 @@ document.getElementById('import').onclick = function() {
 };
 
 function somethinghappened() {
-	/*
 
-// set the dimensions and margins of the graph
-var margin = {top: 20, right: 25, bottom: 30, left: 40},
-  width = 450 - margin.left - margin.right,
-  height = 450 - margin.top - margin.bottom;
+	
+	var margin = {top: 20, right: 25, bottom: 30, left: 40},
+  width = 1400 - margin.left - margin.right,
+  height = 230 - margin.top - margin.bottom;
 
 // append the svg object to the body of the page
-var svg = d3.select("#div_template")
-.append("svg")
-  .attr("width", width + margin.left + margin.right)
-  .attr("height", height + margin.top + margin.bottom)
-.append("g")
-  .attr("transform",
-        "translate(" + margin.left + "," + margin.top + ")");
+  	var tmp = d3.select("#githubstyle");
+  	tmp.selectAll("*").remove();
+	var svg = d3.select("#githubstyle")
+		.append("svg")
+		  .attr("width", width + margin.left + margin.right)
+		  .attr("height", height + margin.top + margin.bottom)
+		.append("g")
+		  .attr("transform",
+	        "translate(" + margin.left + "," + margin.top + ")");
 
-//Read the data
-d3.csv("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/heatmap_data.csv", function(data) {
-
-  // Labels of row and columns -> unique identifier of the column called 'group' and 'variable'
-  var myGroups = d3.map(data, function(d){return d.group;}).keys()
-  var myVars = d3.map(data, function(d){return d.variable;}).keys()
-
-  // Build X scales and axis:
-  var x = d3.scaleBand()
-    .range([ 0, width ])
-    .domain(myGroups)
-    .padding(0.05);
-  svg.append("g")
-    .style("font-size", 15)
-    .attr("transform", "translate(0," + height + ")")
-    .call(d3.axisBottom(x).tickSize(0))
-    .select(".domain").remove()
-
-  // Build Y scales and axis:
-  var y = d3.scaleBand()
-    .range([ height, 0 ])
-    .domain(myVars)
-    .padding(0.05);
-  svg.append("g")
-    .style("font-size", 15)
-    .call(d3.axisLeft(y).tickSize(0))
-    .select(".domain").remove()
-
-  // Build color scale
-  var myColor = d3.scaleSequential()
-    .interpolator(d3.interpolateInferno)
-    .domain([1,100])
-
-  // create a tooltip
-  var Tooltip = d3.select("#div_template")
-    .append("div")
-    .style("opacity", 0)
-    .attr("class", "tooltip")
-    .style("background-color", "white")
-    .style("border", "solid")
-    .style("border-width", "2px")
-    .style("border-radius", "5px")
-    .style("padding", "5px")
-
-  // Three function that change the tooltip when user hover / move / leave a cell
-  var mouseover = function(d) {
-    Tooltip
-      .style("opacity", 1)
-    d3.select(this)
-      .style("stroke", "black")
-      .style("opacity", 1)
-  }
-  var mousemove = function(d) {
-    Tooltip
-      .html("The exact value of<br>this cell is: " + d.value)
-      .style("left", (d3.mouse(this)[0]+70) + "px")
-      .style("top", (d3.mouse(this)[1]+100) + "px")
-  }
-  var mouseleave = function(d) {
-    Tooltip
-      .style("opacity", 0)
-    d3.select(this)
-      .style("stroke", "none")
-      .style("opacity", 0.8)
-  }
-
-
-  // add the squares
-  svg.selectAll()
-    .data(data, function(d) {return d.group+':'+d.variable;})
-    .enter()
-    .append("rect")
-      .attr("x", function(d) { return x(d.group) })
-      .attr("y", function(d) { return y(d.variable) })
-      .attr("rx", 4)
-      .attr("ry", 4)
-      .attr("width", x.bandwidth() )
-      .attr("height", y.bandwidth() )
-      .style("fill", function(d) { return myColor(d.value)} )
-      .style("stroke-width", 4)
-      .style("stroke", "none")
-      .style("opacity", 0.8)
-    .on("mouseover", mouseover)
-    .on("mousemove", mousemove)
-    .on("mouseleave", mouseleave)
-})
-*/
-	
-	var svg = d3.select("#githubstyle");
 
 	let data = Array.from(x, ([date, value]) => ({ date, value }));
-	data = data.filter((d) => new Date(d.date).getFullYear()==2022);
+	data = data.filter((d) => new Date(d.date).getFullYear()==currentYear);
 	let amt = data.map((d) => d.value.reduce((ac, cv) => ac + cv.ms_played, 0) / 1000)
 	let mx = amt[0];
 	for (let i=1; i < amt.length; i++) {
@@ -237,12 +164,12 @@ d3.csv("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/he
 	console.log(data);
 
 	var xScale = d3.scaleLinear()
-		.domain([0,51])
-		.range([100,1400]);
+		.domain([1,52])
+		.range([0,width]);
 
 	var yScale = d3.scaleLinear()
 		.domain([0,6])
-		.range([50,450]);
+		.range([0,height]);
 
 	var colorLight = d3.scaleSequential()
 						.interpolator(d3.interpolate("white", "blue"))
@@ -252,7 +179,7 @@ d3.csv("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/he
 
   var yAxis = d3.axisLeft(yScale);
 
-  var Tooltip = d3.select("#div_template")
+  var Tooltip = d3.select("#githubstyle")
     .append("div")
     .style("opacity", 0)
     .attr("class", "tooltip")
@@ -265,16 +192,15 @@ d3.csv("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/he
   // Three function that change the tooltip when user hover / move / leave a cell
   var mouseover = function(d) {
     Tooltip
-      .style("opacity", 1)
+      .style("opacity", .92)
     d3.select(this)
-      .style("stroke", "black")
-      .style("opacity", 1)
+      .style("opacity", .4)
   }
   var mousemove = function(d) {
     Tooltip
       .html("The exact value of<br>this cell is: " + d.value.reduce((ac, cv) => ac + cv.ms_played,0) / 1000.0 + "<br> date is" + d.date)
-      .style("left", (d3.mouse(this)[0]+70) + "px")
-      .style("top", (d3.mouse(this)[1]) + "px")
+      .style("left", (d3.mouse(this)[0]) + "px")
+      .style("top", (d3.mouse(this)[1]+30) + "px")
   }
   var mouseleave = function(d) {
     Tooltip
@@ -284,18 +210,17 @@ d3.csv("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/he
       .style("opacity", 0.8)
 
   }
-	svg.append("g")
-    .attr("transform", "translate(0,60)")
-    .call(xAxis);
 
     svg.selectAll("rect")
     	.data(data)
     	.enter()
     	.append("rect")
     		.attr("fill", (d) => colorLight(d.value.reduce((ac, cv) => ac + cv.ms_played,0)/1000))
+    		.attr("rx","3")
+    		.attr("ry","3")
     		.attr("width", "20")
     		.attr("height", "20")
-    		.attr("x", (d) => xScale(((new Date(d.date).getWeekNumber() + 51) % 52)))
+    		.attr("x", (d) => xScale((new Date(d.date).getWeekNumber()+51)%52))
     		.attr("y", (d) => yScale((new Date(d.date).getDay()+6)%7))
     	.on("mouseover", mouseover)
 	    .on("mousemove", mousemove)

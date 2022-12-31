@@ -1,28 +1,29 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <html lang="en">
-
+<div id="buttonarea">
 <input type="file" id="selectFiles" value="Import" multiple/><br />
 <button id="import">Import</button>
 <textarea id="result">
 
 </textarea>
 <button id="dosomething" onClick=dosomething()>press me</button>
-<button id="fred" onClick=somethinghappened()>Press me as well</button>
-
+<button id="fred" onClick=somethinghappened()>Generate chart</button>
+<select id="changeYear"></select>
+</div>
 <!-- Load d3.js -->
 <head>
 <script src="https://d3js.org/d3.v4.js"></script>
 <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
 
-<script src="render.js"></script>
+<script src="render.js" defer></script>
 <style>
 
 </style>
 </head>
 <body>
   <br>
-  <svg id="githubstyle" width="1500" height="500"></svg>
+  <div id="githubstyle"></div>
 
 <div id="div_template"></div>
 
@@ -32,6 +33,10 @@
 </html>
 
 <style>
+  #buttonarea {
+    margin:auto;
+    text-align: center;
+  }
   div.tooltip {
     position: absolute;
     text-align: center;
