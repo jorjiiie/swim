@@ -1,13 +1,40 @@
 Date.prototype.getWeekNumber = function(){
-  var d = new Date(Date.UTC(this.getFullYear(), this.getMonth(), this.getDate()));
-  var dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1)/7)
+	console.log(this + " " + this.getFullYear());
+	let now = new Date(this.getFullYear(), this.getMonth(), this.getDate());
+	let onejan = new Date(now.getFullYear(), 0, 1);
+	let week = Math.ceil((((now.getTime() - onejan.getTime()) / 86400000) + onejan.getDay() + 1) / 7);
+	return week;
 };
 
+// Date.prototype.getWeekNumber = function() {
+// 	// Get the first day of the year
+// 	const startOfYear = new Date(this.getFullYear(), 0, 1);
+// 	// Calculate the number of days since the start of the year
+// 	if (startOfYear.getDay() == 1) {
+// 		// we start on a monday!
+// 		const daysSinceStartOfYear = Math.floor((this - startOfYear) / 86400000);
+// 		// Calculate the week of the year
+// 		const week = 1 + Math.floor(daysSinceStartOfYear / 7);
+// 		// console.log("wat" + startOfYear + startOfYear.getDay());
+// 		return week;
+// 	} else {
+// 		// we grab the first monday - it's definitely the second week of the year
+// 		const dow = startOfYear.getDay();
+
+// 		// current day of week + x = 1 (mod 7)
+// 		startOfYear.setUTCDate((9 - dow) % 7);
+// 		if (this < startOfYear)
+// 			return 1;
+// 		console.log(startOfYear + dow + ((9 - dow) % 7));
+// 		let daysSinceStartOfYear = (this - startOfYear) / 86400000;
+// 		daysSinceStartOfYear = Math.floor(daysSinceStartOfYear);
+// 		// console.log(this + " " + daysSinceStartOfYear);
+// 		return 1 + Math.floor(daysSinceStartOfYear / 7);
+// 	}
+  
+// };
 Date.prototype.toDayKey = function() {
-  let d = new Date(Date.UTC(this.getFullYear(), this.getMonth(), this.getDate()));
+  let d = new Date(this.getFullYear(), this.getMonth(), this.getDate());
   return d.toISOString();
 }
 
@@ -39,6 +66,7 @@ function sortAll() {
   x = new Map([...x.entries()].sort());
   for (let z of x.keys()) {
   	years.add(new Date(z).getFullYear());
+  	// console.log(z + " " + new Date(z).getWeekNumber());
     x.set(z,x.get(z).sort());
   }
   while(menu.options.length > 0)
@@ -154,7 +182,7 @@ function somethinghappened() {
 
 
 	let data = Array.from(x, ([date, value]) => ({ date, value }));
-	data = data.filter((d) => new Date(d.date).getFullYear()==currentYear);
+	data = data.filter((d) => new Date(d.date).getUTCFullYear()==currentYear);
 	let amt = data.map((d) => d.value.reduce((ac, cv) => ac + cv.ms_played, 0) / 1000)
 	let mx = amt[0];
 	for (let i=1; i < amt.length; i++) {
@@ -165,7 +193,7 @@ function somethinghappened() {
 
 	var xScale = d3.scaleLinear()
 		.domain([1,52])
-		.range([0,width]);
+		.range([0,width-100]);
 
 	var yScale = d3.scaleLinear()
 		.domain([0,6])
@@ -176,7 +204,9 @@ function somethinghappened() {
 						.domain([-400,mx]);
 
 	var xAxis = d3.axisBottom(xScale);
-
+	data.forEach(function(d) {
+		console.log(d.date + " " + new Date(d.date).getWeekNumber() + " " + xScale(new Date(d.date).getWeekNumber()));
+	})
   var yAxis = d3.axisLeft(yScale);
 
   var Tooltip = d3.select("#githubstyle")
@@ -220,8 +250,8 @@ function somethinghappened() {
     		.attr("ry","3")
     		.attr("width", "20")
     		.attr("height", "20")
-    		.attr("x", (d) => xScale((new Date(d.date).getWeekNumber()+51)%52))
-    		.attr("y", (d) => yScale((new Date(d.date).getDay()+6)%7))
+    		.attr("x", (d) => xScale((new Date(d.date).getWeekNumber()+0)))
+    		.attr("y", (d) => yScale((new Date(d.date).getDay()+0)%7))
     	.on("mouseover", mouseover)
 	    .on("mousemove", mousemove)
 	    .on("mouseleave", mouseleave)
