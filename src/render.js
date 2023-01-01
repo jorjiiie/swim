@@ -1,38 +1,11 @@
 Date.prototype.getWeekNumber = function(){
-	console.log(this + " " + this.getFullYear());
 	let now = new Date(this.getFullYear(), this.getMonth(), this.getDate());
 	let onejan = new Date(now.getFullYear(), 0, 1);
 	let week = Math.ceil((((now.getTime() - onejan.getTime()) / 86400000) + onejan.getDay() + 1) / 7);
 	return week;
 };
 
-// Date.prototype.getWeekNumber = function() {
-// 	// Get the first day of the year
-// 	const startOfYear = new Date(this.getFullYear(), 0, 1);
-// 	// Calculate the number of days since the start of the year
-// 	if (startOfYear.getDay() == 1) {
-// 		// we start on a monday!
-// 		const daysSinceStartOfYear = Math.floor((this - startOfYear) / 86400000);
-// 		// Calculate the week of the year
-// 		const week = 1 + Math.floor(daysSinceStartOfYear / 7);
-// 		// console.log("wat" + startOfYear + startOfYear.getDay());
-// 		return week;
-// 	} else {
-// 		// we grab the first monday - it's definitely the second week of the year
-// 		const dow = startOfYear.getDay();
 
-// 		// current day of week + x = 1 (mod 7)
-// 		startOfYear.setUTCDate((9 - dow) % 7);
-// 		if (this < startOfYear)
-// 			return 1;
-// 		console.log(startOfYear + dow + ((9 - dow) % 7));
-// 		let daysSinceStartOfYear = (this - startOfYear) / 86400000;
-// 		daysSinceStartOfYear = Math.floor(daysSinceStartOfYear);
-// 		// console.log(this + " " + daysSinceStartOfYear);
-// 		return 1 + Math.floor(daysSinceStartOfYear / 7);
-// 	}
-  
-// };
 Date.prototype.toDayKey = function() {
   let d = new Date(this.getFullYear(), this.getMonth(), this.getDate());
   return d.toISOString();
@@ -223,12 +196,14 @@ function somethinghappened() {
   var mouseover = function(d) {
     Tooltip
       .style("opacity", .92)
+      .html(getCard(d))
+
     d3.select(this)
       .style("opacity", .4)
   }
   var mousemove = function(d) {
     Tooltip
-      .html("The exact value of<br>this cell is: " + d.value.reduce((ac, cv) => ac + cv.ms_played,0) / 1000.0 + "<br> date is" + d.date)
+      // .html("The exact value of<br>this cell is: " + d.value.reduce((ac, cv) => ac + cv.ms_played,0) / 1000.0 + "<br> date is" + d.date)
       .style("left", (d3.mouse(this)[0]) + "px")
       .style("top", (d3.mouse(this)[1]+30) + "px")
   }
@@ -256,6 +231,27 @@ function somethinghappened() {
 	    .on("mousemove", mousemove)
 	    .on("mouseleave", mouseleave)
 
+}
 
+function getCard(d) {
+	let timeListened = d.value.reduce((ac, cv) => ac + cv.ms_played,0) / 1000.0/60.0; // minutes
+	let mp = new Map();
+	let obj = {};
+	for (const rec of d.value) {
+		const key = rec.track + " " + rec.artist;
+		if (mp.has(key)) {
+			mp.set(key,mp.get(key)+rec.ms_played);
+		} else {
+			mp.set(key,rec.ms_played);
+		}
+		console.log("hi " + rec.track);
+	}
+	console.log(mp);
+	let sngs = Array.from(mp, ([label, time]) => ({time, label})).sort((a, b) => (b.time - a.time));
+	let songs = "";
+	for (const rec of sngs.slice(0,7)) {
+		songs += rec.label + ": " + Math.floor(rec.time/600)/100 + " minutes<br>";
+	}
 
+	return "Date: " + d.date + "<br>Time listened: " + timeListened + " minutes<br> songs: " + songs;
 }
