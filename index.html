@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Listening Stats</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://d3js.org/d3.v4.js"></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="header">
+    <div class="header-content">
+      <h1 class="logo">Listening Stats</h1>
+      <div class="controls">
+        <label class="file-input">
+          <input type="file" id="selectFiles" accept=".json" multiple>
+          <span class="file-button">Choose Files</span>
+        </label>
+        <button id="import" class="btn btn-primary">Import</button>
+        <select id="yearSelect" class="year-select" disabled>
+          <option>Year</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <main class="dashboard">
+    <!-- Empty state -->
+    <div id="emptyState" class="empty-state">
+      <div class="empty-state-content">
+        <span class="empty-icon">○</span>
+        <h2>No data yet</h2>
+        <p>Import your Spotify extended streaming history to begin.</p>
+        <p class="hint">Request your data from Spotify's Privacy Settings.</p>
+      </div>
+    </div>
+
+    <!-- Dashboard content -->
+    <div id="dashboardContent" class="dashboard-content hidden">
+      
+      <!-- Stats Cards -->
+      <section class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-value" id="totalHours">0</span>
+          <span class="stat-label">Hours</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="uniqueArtists">0</span>
+          <span class="stat-label">Artists</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="uniqueTracks">0</span>
+          <span class="stat-label">Tracks</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="avgDaily">0</span>
+          <span class="stat-label">Avg Min / Day</span>
+        </div>
+      </section>
+
+      <!-- Top Lists -->
+      <section class="top-lists">
+        <div class="top-list-section">
+          <h2 class="card-title">Top Artists</h2>
+          <ol class="top-list" id="topArtists"></ol>
+        </div>
+        <div class="top-list-section">
+          <h2 class="card-title">Top Songs</h2>
+          <ol class="top-list" id="topSongs"></ol>
+        </div>
+      </section>
+
+      <!-- Heatmap -->
+      <section class="heatmap-section">
+        <h2 class="card-title">Activity</h2>
+        <p class="card-hint">Click any day to see details</p>
+        <div id="heatmap"></div>
+      </section>
+
+      <!-- Daily Detail Modal -->
+      <div id="dailyModal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+          <button class="modal-close" id="closeModal">×</button>
+          <h2 class="modal-title" id="modalDate">Date</h2>
+          <div class="modal-stats">
+            <div class="modal-stat">
+              <span class="modal-stat-value" id="modalTime">0</span>
+              <span class="modal-stat-label">Listened</span>
+            </div>
+            <div class="modal-stat">
+              <span class="modal-stat-value" id="modalStreams">0</span>
+              <span class="modal-stat-label">Streams</span>
+            </div>
+            <div class="modal-stat">
+              <span class="modal-stat-value" id="modalTracks">0</span>
+              <span class="modal-stat-label">Tracks</span>
+            </div>
+          </div>
+          <div class="modal-lists">
+            <div class="modal-list-section">
+              <h3>Artists</h3>
+              <ol class="top-list" id="modalArtists"></ol>
+            </div>
+            <div class="modal-list-section">
+              <h3>Songs</h3>
+              <ol class="top-list" id="modalSongs"></ol>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Listening Patterns -->
+      <section class="patterns-section">
+        <div class="card">
+          <h2 class="card-title">By Hour</h2>
+          <p class="card-hint">Click any hour to explore</p>
+          <div id="hourChart"></div>
+        </div>
+        <div class="card">
+          <h2 class="card-title">By Day</h2>
+          <p class="card-hint">Click any day to explore</p>
+          <div id="dayChart"></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>Data stays in your browser.</p>
+  </footer>
+</body>
+</html>
