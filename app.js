@@ -89,6 +89,24 @@ elements.importBtn.onclick = function () {
 };
 
 function convertRecord(raw) {
+  const isPodcast = !!raw.episode_name;
+
+  return {
+    ts: new Date(raw.ts),
+    ms: raw.ms_played,
+
+    track: isPodcast
+      ? raw.episode_name
+      : raw.master_metadata_track_name,
+
+    artist: isPodcast
+      ? raw.episode_show_name
+      : raw.master_metadata_album_artist_name,
+  };
+}
+
+/*
+function convertRecord(raw) {
   return {
     ts: new Date(raw.ts),
     ms: raw.ms_played,
@@ -96,6 +114,7 @@ function convertRecord(raw) {
     artist: raw.master_metadata_album_artist_name,
   };
 }
+*/
 
 function processData() {
   store.byDay.clear();
