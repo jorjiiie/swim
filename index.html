@@ -43,7 +43,9 @@
     <div id="dashboardContent" class="dashboard-content hidden">
       
       <!-- Stats Cards -->
-      <section class="stats-grid">
+      <section class="stats-section">
+        <h2 class="card-title stats-title">Overview</h2>
+        <div class="stats-grid">
         <div class="stat-card">
           <span class="stat-value" id="totalHours">0</span>
           <span class="stat-label">Hours</span>
@@ -60,15 +62,16 @@
           <span class="stat-value" id="avgDaily">0</span>
           <span class="stat-label">Avg Min / Day</span>
         </div>
-      </section>
+        </div>
+      </section>>
 
       <!-- Top Lists -->
       <section class="top-lists">
-        <div class="top-list-section">
+        <div class="top-list-section top-list-artists">
           <h2 class="card-title">Top Artists</h2>
           <ol class="top-list" id="topArtists"></ol>
         </div>
-        <div class="top-list-section">
+        <div class="top-list-section top-list-songs">
           <h2 class="card-title">Top Songs</h2>
           <ol class="top-list" id="topSongs"></ol>
         </div>
@@ -116,12 +119,12 @@
 
       <!-- Listening Patterns -->
       <section class="patterns-section">
-        <div class="card">
+        <div class="card chart-hour">
           <h2 class="card-title">By Hour</h2>
           <p class="card-hint">Click any hour to explore</p>
           <div id="hourChart"></div>
         </div>
-        <div class="card">
+        <div class="card chart-day">
           <h2 class="card-title">By Day</h2>
           <p class="card-hint">Click any day to explore</p>
           <div id="dayChart"></div>

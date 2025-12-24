@@ -58,8 +58,9 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeModal();
 });
 
-function openModal() {
+function openModal(theme = 'activity') {
   elements.modal.classList.remove("hidden");
+  elements.modal.querySelector('.modal-content').dataset.theme = theme;
   document.body.style.overflow = "hidden";
 }
 
@@ -291,7 +292,7 @@ function renderHeatmap(data) {
 
   const colorScale = d3.scaleSequential()
     .domain([0, maxMs])
-    .interpolator(d3.interpolate("#ede9e4", "#c45d3a"));
+    .interpolator(d3.interpolate("#f8f0e8", "#c17f4e"));
 
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   days.forEach((day, i) => {
@@ -299,7 +300,7 @@ function renderHeatmap(data) {
       .attr("x", -10)
       .attr("y", i * (cellSize + cellPadding) + cellSize / 2 + 4)
       .attr("text-anchor", "end")
-      .attr("fill", "#9a918a")
+      .attr("fill", "#c17f4e")
       .attr("font-size", "10px")
       .text(day);
   });
@@ -322,8 +323,8 @@ function renderHeatmap(data) {
     .style("cursor", "pointer")
     .on("mouseover", function (d) {
       tooltip.style("opacity", 1)
-        .html(`<strong>${d.date.toDateString()}</strong><br>${formatMinutes(d.ms)} listened<br><span style="color:#9a918a">Click for details</span>`);
-      d3.select(this).attr("stroke", "#c45d3a").attr("stroke-width", 2);
+        .html(`<strong>${d.date.toDateString()}</strong><br>${formatMinutes(d.ms)} listened<br><span style="color:#a09a93">Click for details</span>`);
+      d3.select(this).attr("stroke", "#c17f4e").attr("stroke-width", 2);
     })
     .on("mousemove", function () {
       tooltip
@@ -538,7 +539,7 @@ function showHourDetail(hour, yearData) {
       </li>
     `).join("");
   
-  openModal();
+  openModal('hour');
 }
 
 // === Day of Week Detail Modal ===
@@ -600,7 +601,7 @@ function showDayOfWeekDetail(dayIndex, yearData) {
       </li>
     `).join("");
   
-  openModal();
+  openModal('day');
 }
 
 // === Utilities ===
