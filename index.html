@@ -9,7 +9,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="https://d3js.org/d3.v4.js"></script>
-  <script src="app.js" defer></script>
+  <script src="core.js" defer></script>
+  <script src="panels/stats.js" defer></script>
+  <script src="panels/top-artists.js" defer></script>
+  <script src="panels/top-songs.js" defer></script>
+  <script src="panels/heatmap.js" defer></script>
+  <script src="panels/hour-chart.js" defer></script>
+  <script src="panels/day-chart.js" defer></script>
 </head>
 <body>
   <header class="header">
@@ -104,6 +110,7 @@
               <span class="modal-stat-label">Tracks</span>
             </div>
           </div>
+          <div id="modalTimeline" class="modal-timeline hidden"></div>
           <div class="modal-lists">
             <div class="modal-list-section">
               <h3>Artists</h3>
