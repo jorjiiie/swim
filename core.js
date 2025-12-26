@@ -570,7 +570,7 @@ window.swim = {
     s.resetModalState();
 
     // Title
-    s.elements.modalDate.innerHTML = `${s.escapeHtml(track)}<span class="modal-subtitle">${s.escapeHtml(artist)} · ${s.store.currentYear}</span>`;
+    s.elements.modalDate.innerHTML = `${s.escapeHtml(track)}<span class="modal-subtitle">${s.escapeHtml(artist)} · Listening during ${s.store.currentYear}</span>`;
 
     // Stats
     const totalMs = songRecords.reduce((sum, r) => sum + r.ms, 0);
@@ -835,12 +835,102 @@ document.addEventListener('DOMContentLoaded', function() {
       track: isPodcast ? raw.episode_name : raw.master_metadata_track_name,
       artist: isPodcast ? raw.episode_show_name : raw.master_metadata_album_artist_name,
     };
+    }
+
+
+  function inferSongDuration(values, eps = 2000) {
+    if (values.length === 0) return null;
+
+    // sort ascending
+    const sorted = [...values].sort((a, b) => a - b);
+
+    // drop extreme corruption (top 0.1%)
+    const cutoff = Math.floor(sorted.length * 0.999);
+    const clean = sorted.slice(0, Math.max(cutoff, 1));
+
+    // --- 1) upper-end clustering ---
+    const k = Math.min(10, clean.length);
+    const top = clean.slice(-k);
+
+    const mean =
+      top.reduce((a, b) => a + b, 0) / top.length;
+    const variance =
+      top.reduce((a, b) => a + (b - mean) ** 2, 0) / top.length;
+
+    if (Math.sqrt(variance) < eps) {
+      return Math.round(mean);
+    }
+
+    // --- 2) repeated values ---
+    const counts = new Map();
+    for (const v of clean) {
+      counts.set(v, (counts.get(v) || 0) + 1);
+    }
+
+    let best = null;
+    for (const [v, c] of counts) {
+      if (c > 1 && (best === null || v > best)) {
+        best = v;
+      }
+    }
+
+    if (best !== null) return best;
+
+    // --- 3) information-theoretic fallback ---
+    return Math.max(...clean);
   }
 
   function processData() {
     s.store.byDay.clear();
     s.store.years.clear();
     s.store.songDurations.clear();
+
+    // song|artist -> list of playtimes
+    const durations = new Map();
+
+    for (const rec of s.store.raw) {
+      if (!rec.ts) continue;
+
+      const key = rec.ts.toDayKey();
+      s.store.years.add(rec.ts.getFullYear());
+
+      if (!s.store.byDay.has(key)) {
+        s.store.byDay.set(key, []);
+      }
+      s.store.byDay.get(key).push(rec);
+
+      if (rec.track) {
+        const songKey = `${rec.track}|||${rec.artist}`;
+        if (!durations.has(songKey)) {
+          durations.set(songKey, []);
+        }
+        durations.get(songKey).push(rec.ms);
+      }
+    }
+
+    // --- second pass: infer durations ---
+    for (const [songKey, values] of durations) {
+      const inferred = inferSongDuration(values);
+      if (inferred !== null) {
+        s.store.songDurations.set(songKey, inferred);
+      }
+    }
+
+    s.store.byDay = new Map(
+      [...s.store.byDay.entries()].sort()
+    );
+
+    populateYearSelect();
+    showDashboard();
+  }
+  /*
+  function processData() {
+    s.store.byDay.clear();
+    s.store.years.clear();
+    s.store.songDurations.clear();
+
+    // song|artist -> list of song durations 
+    durations = new Map();
 
     for (const rec of s.store.raw) {
       if (!rec.ts) continue;
@@ -855,6 +945,12 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       if (rec.track) {
+
+        // append the current duration onto the map 
+        durations.set(`${rec.track}|||${rec.artist}`, [
+          ...(durations.get(`${rec.track}|||${rec.artist}`) || []),
+          rec.ms
+        ]);
         const songKey = `${rec.track}|||${rec.artist}`;
         const currentMax = s.store.songDurations.get(songKey) || 0;
         s.store.songDurations.set(songKey, Math.max(currentMax, rec.ms));
@@ -865,6 +961,7 @@ document.addEventListener('DOMContentLoaded', function() {
     populateYearSelect();
     showDashboard();
   }
+  */
 
   function populateYearSelect() {
     const select = s.elements.yearSelect;
