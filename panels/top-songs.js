@@ -6,6 +6,11 @@ swim.registerPanel(function(data) {
     .sort((a, b) => b.totalMs - a.totalMs)
     .slice(0, 10);
 
+  if (sorted.length === 0) {
+    s.elements.topSongs.innerHTML = '<li class="no-results">No songs found</li>';
+    return;
+  }
+
   s.elements.topSongs.innerHTML = sorted
     .map((song, idx) => `
       <li data-idx="${idx}">
@@ -24,7 +29,10 @@ swim.registerPanel(function(data) {
     li.addEventListener('click', () => {
       const idx = parseInt(li.dataset.idx);
       const song = sorted[idx];
-      s.showSongDetail(song.track, song.artist, data);
+      s.showSongDetail(song.track, song.artist);
     });
   });
+
+  // Setup scroll effect for long names
+  s.setupScrollingNames(s.elements.topSongs);
 });

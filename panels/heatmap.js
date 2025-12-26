@@ -4,6 +4,17 @@ swim.registerPanel(function(data) {
   const container = d3.select("#heatmap");
   container.selectAll("*").remove();
 
+  // Show message for "All Years" mode
+  if (s.store.currentYear === null) {
+    container.append("div")
+      .attr("class", "heatmap-placeholder")
+      .style("color", "var(--text-muted)")
+      .style("padding", "2rem")
+      .style("text-align", "center")
+      .text("Select a specific year to view the activity heatmap");
+    return;
+  }
+
   const margin = { top: 20, right: 20, bottom: 20, left: 50 };
   const cellSize = 15;
   const cellPadding = 3;
@@ -77,6 +88,6 @@ swim.registerPanel(function(data) {
     })
     .on("click", function(d) {
       tooltip.style("opacity", 0);
-      s.showDayDetail(d.date, data, false);
+      s.showDayDetail(d.date, false);
     });
 });

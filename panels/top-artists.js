@@ -12,6 +12,11 @@ swim.registerPanel(function(data) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10);
 
+  if (sorted.length === 0) {
+    s.elements.topArtists.innerHTML = '<li class="no-results">No artists found</li>';
+    return;
+  }
+
   s.elements.topArtists.innerHTML = sorted
     .map(([name, ms], idx) => `
       <li data-idx="${idx}">
@@ -29,7 +34,10 @@ swim.registerPanel(function(data) {
   s.elements.topArtists.querySelectorAll('li').forEach(li => {
     li.addEventListener('click', () => {
       const idx = parseInt(li.dataset.idx);
-      s.showArtistDetail(artistNames[idx], data);
+      s.showArtistDetail(artistNames[idx]);
     });
   });
+
+  // Setup scroll effect for long names
+  s.setupScrollingNames(s.elements.topArtists);
 });

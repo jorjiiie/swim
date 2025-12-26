@@ -31,6 +31,7 @@
         <select id="yearSelect" class="year-select" disabled>
           <option>Year</option>
         </select>
+        <input type="text" id="searchFilter" class="search-filter" placeholder="Filter by artist, track..." disabled>
       </div>
     </div>
   </header>
@@ -51,7 +52,7 @@
       
       <!-- Stats Cards -->
       <section class="stats-section">
-        <h2 class="card-title stats-title">Overview</h2>
+        <h2 class="card-title stats-title" id="statsTitle">Overview</h2>
         <div class="stats-grid">
         <div class="stat-card">
           <span class="stat-value" id="totalHours">0</span>
@@ -78,7 +79,7 @@
 
       <!-- Overview Timeline -->
       <section class="overview-timeline-section">
-        <h2 class="card-title">Year in Review</h2>
+        <h2 class="card-title" id="timelineTitle">Year in Review</h2>
         <p class="card-hint">Click any day to explore</p>
         <div id="overviewTimeline"></div>
       </section>
@@ -129,6 +130,7 @@
             </div>
           </div>
           <div id="modalTimeline" class="modal-timeline hidden"></div>
+          <div id="modalHourChart" class="modal-hour-chart hidden"></div>
           <div class="modal-lists">
             <div class="modal-list-section">
               <h3>Artists</h3>

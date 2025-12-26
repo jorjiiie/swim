@@ -1,6 +1,19 @@
 // Stats panel - overview cards
 swim.registerPanel(function(data) {
   const s = swim;
+
+  // Update title with current filter
+  s.elements.statsTitle.textContent = `Overview · ${s.getFilterDescription()}`;
+
+  if (data.length === 0) {
+    s.elements.totalHours.textContent = "—";
+    s.elements.totalStreams.textContent = "—";
+    s.elements.uniqueArtists.textContent = "—";
+    s.elements.uniqueTracks.textContent = "—";
+    s.elements.avgDaily.textContent = "—";
+    return;
+  }
+
   const totalMs = data.reduce((sum, r) => sum + r.ms, 0);
   const hours = Math.round(totalMs / 3600000);
   const artists = new Set(data.map((r) => r.artist).filter(Boolean)).size;

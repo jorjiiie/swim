@@ -30,14 +30,14 @@ swim.registerPanel(function(data) {
   s.elements.hourChart.querySelectorAll('.bar-row').forEach(row => {
     row.addEventListener('click', () => {
       const hour = parseInt(row.dataset.hour);
-      showHourDetail(hour, data);
+      showHourDetail(hour);
     });
   });
 
-  function showHourDetail(hour, yearData) {
-    // Always use full year data
-    const fullYearData = s.getYearData(s.store.currentYear);
-    const hourRecords = fullYearData.filter(r => r.ts.getHours() === hour);
+  function showHourDetail(hour) {
+    // Use filtered data (respects both year and search filter)
+    const filteredData = s.getFilteredData();
+    const hourRecords = filteredData.filter(r => r.ts.getHours() === hour);
     if (hourRecords.length === 0) return;
 
     // Track current view for history
@@ -55,7 +55,7 @@ swim.registerPanel(function(data) {
     else if (hour < 12) hourLabel = `${hour}:00 AM`;
     else hourLabel = `${hour - 12}:00 PM`;
 
-    s.elements.modalDate.innerHTML = `${hourLabel}<span class="modal-subtitle">All listening during this hour in ${s.store.currentYear}</span>`;
+    s.elements.modalDate.innerHTML = `${hourLabel}<span class="modal-subtitle">All listening during this hour in ${s.getYearLabel()}</span>`;
 
     const totalMs = hourRecords.reduce((sum, r) => sum + r.ms, 0);
     const uniqueTracks = new Set(hourRecords.map(r => `${r.track}|||${r.artist}`).filter(Boolean)).size;
@@ -66,8 +66,8 @@ swim.registerPanel(function(data) {
     s.elements.modalStreams.textContent = totalStreams.toLocaleString();
     s.elements.modalTracks.textContent = uniqueTracks.toLocaleString();
 
-    // Render clickable lists with full year data
-    s.renderModalLists(hourRecords, fullYearData);
+    // Render clickable lists with filtered data
+    s.renderModalLists(hourRecords);
 
     s.openModal('hour');
   }

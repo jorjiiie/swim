@@ -26,15 +26,15 @@ swim.registerPanel(function(data) {
   s.elements.dayChart.querySelectorAll('.bar-row').forEach(row => {
     row.addEventListener('click', () => {
       const day = parseInt(row.dataset.day);
-      showDayOfWeekDetail(day, data);
+      showDayOfWeekDetail(day);
     });
   });
 
-  function showDayOfWeekDetail(dayIndex, yearData) {
-    // Always use full year data
-    const fullYearData = s.getYearData(s.store.currentYear);
+  function showDayOfWeekDetail(dayIndex) {
+    // Use filtered data (respects both year and search filter)
+    const filteredData = s.getFilteredData();
     const dayLabels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const dayRecords = fullYearData.filter(r => r.ts.getDay() === dayIndex);
+    const dayRecords = filteredData.filter(r => r.ts.getDay() === dayIndex);
 
     if (dayRecords.length === 0) return;
 
@@ -47,7 +47,7 @@ swim.registerPanel(function(data) {
 
     s.resetModalState();
 
-    s.elements.modalDate.innerHTML = `${dayLabels[dayIndex]}s<span class="modal-subtitle">All listening on ${dayLabels[dayIndex]}s in ${s.store.currentYear}</span>`;
+    s.elements.modalDate.innerHTML = `${dayLabels[dayIndex]}s<span class="modal-subtitle">All listening on ${dayLabels[dayIndex]}s in ${s.getYearLabel()}</span>`;
 
     const totalMs = dayRecords.reduce((sum, r) => sum + r.ms, 0);
     const uniqueTracks = new Set(dayRecords.map(r => `${r.track}|||${r.artist}`).filter(Boolean)).size;
@@ -58,8 +58,8 @@ swim.registerPanel(function(data) {
     s.elements.modalStreams.textContent = totalStreams.toLocaleString();
     s.elements.modalTracks.textContent = uniqueTracks.toLocaleString();
 
-    // Render clickable lists with full year data
-    s.renderModalLists(dayRecords, fullYearData);
+    // Render clickable lists with filtered data
+    s.renderModalLists(dayRecords);
 
     s.openModal('day');
   }

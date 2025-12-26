@@ -113,6 +113,30 @@ body {
   font-size: 0.8rem;
 }
 
+.search-filter {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 0.8rem;
+  min-width: 200px;
+}
+
+.search-filter:focus {
+  outline: none;
+  border-color: var(--stats-color);
+}
+
+.search-filter::placeholder {
+  color: var(--text-muted);
+}
+
+.search-filter:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Dashboard */
 .dashboard {
   flex: 1;
@@ -270,6 +294,16 @@ body {
 
 .top-list li:last-child { border-bottom: none; }
 
+.top-list .no-results {
+  color: var(--text-muted);
+  font-style: italic;
+  border-bottom: none;
+}
+
+.top-list .no-results::before {
+  display: none;
+}
+
 .top-list li::before {
   content: counter(ranking);
   width: 1.75rem;
@@ -294,6 +328,33 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* Hover scroll effect for long names */
+.list-item-name.has-scroll {
+  position: relative;
+  text-overflow: clip;
+}
+
+.list-item-name .scroll-text {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.list-item-name .scroll-spacer {
+  display: inline-block;
+  width: 3rem;
+}
+
+.top-list li:hover .list-item-name.has-scroll .scroll-text,
+.modal-list-section li:hover .list-item-name.has-scroll .scroll-text {
+  animation: scroll-text var(--scroll-duration, 5s) linear infinite;
+}
+
+@keyframes scroll-text {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
 .list-item-detail {
@@ -587,6 +648,22 @@ body {
   font-weight: 600;
   margin-bottom: 1.5rem;
   color: var(--text);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.modal-title.has-scroll {
+  text-overflow: clip;
+}
+
+.modal-title.has-scroll .scroll-text {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.modal-title.has-scroll:hover .scroll-text {
+  animation: scroll-text var(--scroll-duration, 5s) linear infinite;
 }
 
 .modal-subtitle {
@@ -658,6 +735,10 @@ body {
   color: var(--text-secondary);
 }
 
+.modal-list-section .list-item-name {
+  max-width: 150px;
+}
+
 .list-item-streams {
   color: var(--text-muted);
 }
@@ -693,6 +774,63 @@ body {
 .modal-timeline svg {
   width: 100%;
   overflow: visible;
+}
+
+/* Modal Hour Chart */
+.modal-hour-chart {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-hour-chart-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.hour-chart-grid {
+  display: flex;
+  gap: 2px;
+  height: 80px;
+  align-items: flex-end;
+}
+
+.hour-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  cursor: default;
+}
+
+.hour-bar-track {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  min-height: 0;
+}
+
+.hour-bar-fill {
+  width: 100%;
+  background: var(--hour-color);
+  border-radius: 2px 2px 0 0;
+  transition: opacity 0.15s;
+}
+
+.hour-bar-col:hover .hour-bar-fill {
+  opacity: 0.7;
+}
+
+.hour-bar-label {
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  margin-top: 4px;
 }
 
 .timeline-tooltip {

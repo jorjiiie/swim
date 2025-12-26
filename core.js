@@ -6,7 +6,8 @@ window.swim = {
     byDay: new Map(),
     songDurations: new Map(),
     years: new Set(),
-    currentYear: null,
+    currentYear: null,  // null means "all years"
+    currentFilter: "",
   },
 
   // Modal navigation history
@@ -38,8 +39,64 @@ window.swim = {
     return div.innerHTML;
   },
 
+  // Setup scroll effect for overflowing text in list items
+  setupScrollingNames: function(container) {
+    const items = container.querySelectorAll('.list-item-name');
+    items.forEach(el => {
+      // Check if text overflows
+      if (el.scrollWidth > el.clientWidth) {
+        const text = el.textContent;
+        const escaped = this.escapeHtml(text);
+        // Duplicate text with spacer for seamless loop
+        el.innerHTML = `<span class="scroll-text">${escaped}<span class="scroll-spacer"></span>${escaped}<span class="scroll-spacer"></span></span>`;
+        el.classList.add('has-scroll');
+
+        // Calculate duration based on text length (50px per second)
+        const scrollText = el.querySelector('.scroll-text');
+        const textWidth = scrollText.scrollWidth / 2; // Half because we duplicated
+        const duration = Math.max(3, textWidth / 50); // min 3s, 50px/sec
+        el.style.setProperty('--scroll-duration', `${duration}s`);
+      }
+    });
+  },
+
   getYearData: function(year) {
+    if (year === null) {
+      // All years
+      return this.store.raw.filter((r) => r.ts);
+    }
     return this.store.raw.filter((r) => r.ts && r.ts.getFullYear() === year);
+  },
+
+  // Get data filtered by year AND search filter
+  getFilteredData: function() {
+    let data = this.getYearData(this.store.currentYear);
+
+    const filter = this.store.currentFilter.trim().toLowerCase();
+    if (filter) {
+      data = data.filter((r) => {
+        const artist = (r.artist || "").toLowerCase();
+        const track = (r.track || "").toLowerCase();
+        return artist.includes(filter) || track.includes(filter);
+      });
+    }
+
+    return data;
+  },
+
+  // Get year label for display
+  getYearLabel: function() {
+    return this.store.currentYear === null ? "all time" : this.store.currentYear;
+  },
+
+  // Get a description of the current filter for display
+  getFilterDescription: function() {
+    const year = this.store.currentYear === null ? "All time" : this.store.currentYear;
+    const filter = this.store.currentFilter.trim();
+    if (filter) {
+      return `${year} · "${filter}"`;
+    }
+    return year;
   },
 
   aggregateSongs: function(data) {
@@ -87,6 +144,12 @@ window.swim = {
     document.body.style.overflow = "hidden";
     // Update navigation buttons
     this.updateNavButtons();
+    // Setup scrolling names after modal is visible
+    const s = this;
+    requestAnimationFrame(() => {
+      s.setupScrollingNames(s.elements.modalArtists);
+      s.setupScrollingNames(s.elements.modalSongs);
+    });
   },
 
   closeModal: function() {
@@ -122,6 +185,9 @@ window.swim = {
     if (this.elements.modalTimeline) {
       this.elements.modalTimeline.classList.add('hidden');
     }
+    if (this.elements.modalHourChart) {
+      this.elements.modalHourChart.classList.add('hidden');
+    }
   },
 
   updateNavButtons: function() {
@@ -145,8 +211,7 @@ window.swim = {
     if (this.modalHistory.length === 0) return;
 
     // Save current view to forward history
-    const fullYearData = this.getYearData(this.store.currentYear);
-    this._pushCurrentToForward(fullYearData);
+    this._pushCurrentToForward();
 
     const prev = this.modalHistory.pop();
     this.resetModalState();
@@ -160,8 +225,7 @@ window.swim = {
     if (this.forwardHistory.length === 0) return;
 
     // Save current view to back history
-    const fullYearData = this.getYearData(this.store.currentYear);
-    this._pushCurrentToBack(fullYearData);
+    this._pushCurrentToBack();
 
     const next = this.forwardHistory.pop();
     this.resetModalState();
@@ -177,24 +241,25 @@ window.swim = {
     this.forwardHistory = [];
   },
 
-  _pushCurrentToBack: function(fullYearData) {
+  _pushCurrentToBack: function() {
     const s = this;
-    const curr = s._getCurrentRestoreFn(fullYearData);
+    const curr = s._getCurrentRestoreFn();
     if (curr) {
       s.modalHistory.push({ restore: curr });
     }
   },
 
-  _pushCurrentToForward: function(fullYearData) {
+  _pushCurrentToForward: function() {
     const s = this;
-    const curr = s._getCurrentRestoreFn(fullYearData);
+    const curr = s._getCurrentRestoreFn();
     if (curr) {
       s.forwardHistory.push({ restore: curr });
     }
   },
 
-
-  _getCurrentRestoreFn: function(fullYearData) {
+  // Creates a restore function for the current view
+  // Note: modal functions fetch fresh filtered data internally, so we don't store data here
+  _getCurrentRestoreFn: function() {
     const s = this;
     const prevArtist = s._currentArtist;
     const prevSong = s._currentSong;
@@ -203,55 +268,25 @@ window.swim = {
     const prevDayOfWeek = s._currentDayOfWeek;
 
     if (prevArtist) {
-      return () => s.showArtistDetail(prevArtist, fullYearData, true);
+      return () => s.showArtistDetail(prevArtist, true);
     } else if (prevSong) {
-      return () => s.showSongDetail(prevSong.track, prevSong.artist, fullYearData, true);
+      return () => s.showSongDetail(prevSong.track, prevSong.artist, true);
     } else if (prevDay) {
-      return () => s.showDayDetail(prevDay, fullYearData, true);
+      return () => s.showDayDetail(prevDay, true);
     } else if (prevHour !== null && prevHour !== undefined && s._showHourDetail) {
-      return () => s._showHourDetail(prevHour, fullYearData);
+      return () => s._showHourDetail(prevHour);
     } else if (prevDayOfWeek !== null && prevDayOfWeek !== undefined && s._showDayOfWeekDetail) {
-      return () => s._showDayOfWeekDetail(prevDayOfWeek, fullYearData);
+      return () => s._showDayOfWeekDetail(prevDayOfWeek);
     }
 
     return null;
   },
-  /*
-  _getCurrentRestoreFn: function(fullYearData) {
-    const s = this;
-    if (s._currentArtist) {
-      return () => s.showArtistDetail(s._currentArtist, fullYearData, true);
-    } else if (s._currentSong) {
-      return () => s.showSongDetail(s._currentSong.track, s._currentSong.artist, fullYearData, true);
-    } else if (s._currentDay) {
-      return () => s.showDayDetail(s._currentDay, fullYearData, true);
-    } else if (s._currentHour !== null && s._currentHour !== undefined && s._showHourDetail) {
-      return () => s._showHourDetail(s._currentHour, fullYearData);
-    } else if (s._currentDayOfWeek !== null && s._currentDayOfWeek !== undefined && s._showDayOfWeekDetail) {
-      return () => s._showDayOfWeekDetail(s._currentDayOfWeek, fullYearData);
-    }
-    return null;
-  },
-  */
 
-  _pushCurrentToHistory: function(fullYearData) {
+  _pushCurrentToHistory: function() {
     const s = this;
-    const prevArtist = s._currentArtist;
-    const prevSong = s._currentSong;
-    const prevDay = s._currentDay;
-    const prevHour = s._currentHour;
-    const prevDayOfWeek = s._currentDayOfWeek;
-
-    if (prevArtist) {
-      s.pushHistory(() => s.showArtistDetail(prevArtist, fullYearData, true));
-    } else if (prevSong) {
-      s.pushHistory(() => s.showSongDetail(prevSong.track, prevSong.artist, fullYearData, true));
-    } else if (prevDay) {
-      s.pushHistory(() => s.showDayDetail(prevDay, fullYearData, true));
-    } else if (prevHour !== null && prevHour !== undefined && s._showHourDetail) {
-      s.pushHistory(() => s._showHourDetail(prevHour, fullYearData));
-    } else if (prevDayOfWeek !== null && prevDayOfWeek !== undefined && s._showDayOfWeekDetail) {
-      s.pushHistory(() => s._showDayOfWeekDetail(prevDayOfWeek, fullYearData));
+    const curr = s._getCurrentRestoreFn();
+    if (curr) {
+      s.pushHistory(curr);
     }
   },
 
@@ -284,10 +319,22 @@ window.swim = {
       dayMap.set(key, (dayMap.get(key) || 0) + r.ms);
     }
 
-    // Create full year range
-    const year = s.store.currentYear;
-    const startDate = new Date(year, 0, 1);
-    const endDate = new Date(year, 11, 31);
+    // Create date range (full year or all data range)
+    let startDate, endDate;
+    if (s.store.currentYear === null) {
+      // All years - use data range
+      const dates = records.map(r => r.ts).filter(Boolean);
+      if (dates.length === 0) return;
+      startDate = new Date(Math.min(...dates));
+      endDate = new Date(Math.max(...dates));
+      // Extend to full months
+      startDate.setDate(1);
+      endDate.setMonth(endDate.getMonth() + 1, 0);
+    } else {
+      const year = s.store.currentYear;
+      startDate = new Date(year, 0, 1);
+      endDate = new Date(year, 11, 31);
+    }
 
     const chartData = [];
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
@@ -430,10 +477,19 @@ window.swim = {
       .attr("stroke-width", 2)
       .attr("d", line);
 
-    // X axis
-    const xAxis = d3.axisBottom(xScale)
-      .ticks(d3.timeMonth.every(1))
-      .tickFormat(d3.timeFormat("%b"));
+    // X axis - show years for multi-year, months for single year
+    let xAxis;
+    if (s.store.currentYear === null) {
+      // Multi-year: show years
+      xAxis = d3.axisBottom(xScale)
+        .ticks(d3.timeYear.every(1))
+        .tickFormat(d3.timeFormat("%Y"));
+    } else {
+      // Single year: show months
+      xAxis = d3.axisBottom(xScale)
+        .ticks(d3.timeMonth.every(1))
+        .tickFormat(d3.timeFormat("%b"));
+    }
 
     svg.append("g")
       .attr("transform", `translate(0,${innerHeight})`)
@@ -508,26 +564,115 @@ window.swim = {
         if (!point) return;
 
         tooltip.style("opacity", 0);
-        // Always use full year data for day detail
-        const fullYearData = s.getYearData(s.store.currentYear);
         // Don't skip history - if modal is open, we want to save current view
-        s.showDayDetail(point.data.date, fullYearData, false);
+        s.showDayDetail(point.data.date, false);
       });
   },
 
-  // === Show Day Detail ===
-  showDayDetail: function(date, yearData, skipHistory) {
+  // === Render Day Hour Chart ===
+  // Shows hourly breakdown for a specific day's records
+  renderDayHourChart: function(records) {
     const s = this;
-    // Always use full year data
-    const fullYearData = s.getYearData(s.store.currentYear);
+    const container = s.elements.modalHourChart;
+    container.innerHTML = '';
+    container.classList.remove('hidden');
+
+    if (records.length === 0) {
+      container.classList.add('hidden');
+      return;
+    }
+
+    // Aggregate by hour
+    const hours = Array(24).fill(0);
+    const hourRecords = Array(24).fill(null).map(() => []);
+
+    for (const r of records) {
+      const hour = r.ts.getHours();
+      hours[hour] += r.ms;
+      hourRecords[hour].push(r);
+    }
+
+    const max = Math.max(...hours, 1);
+
+    // Create hour labels
+    const formatHour = (i) => {
+      if (i === 0) return "12a";
+      if (i === 12) return "12p";
+      return i < 12 ? `${i}a` : `${i - 12}p`;
+    };
+
+    // Build chart HTML
+    container.innerHTML = `
+      <h3 class="modal-hour-chart-title">Hourly Breakdown</h3>
+      <div class="hour-chart-grid">
+        ${hours.map((ms, i) => `
+          <div class="hour-bar-col" data-hour="${i}">
+            <div class="hour-bar-track">
+              <div class="hour-bar-fill" style="height: ${ms > 0 ? Math.max(4, (ms / max) * 100) : 0}%"></div>
+            </div>
+            <span class="hour-bar-label">${formatHour(i)}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    // Add tooltip handlers
+    const tooltip = s.tooltip;
+    container.querySelectorAll('.hour-bar-col').forEach(col => {
+      const hour = parseInt(col.dataset.hour);
+      const ms = hours[hour];
+      const recs = hourRecords[hour];
+
+      col.addEventListener('mouseenter', () => {
+        if (ms === 0) {
+          tooltip.style("opacity", 1)
+            .html(`<strong>${formatHour(hour)}</strong><br>No listening`);
+        } else {
+          // Get top 3 songs for this hour
+          const songMap = new Map();
+          for (const r of recs) {
+            if (!r.track) continue;
+            const key = `${r.track}|||${r.artist}`;
+            songMap.set(key, (songMap.get(key) || 0) + r.ms);
+          }
+          const topSongs = [...songMap.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([key]) => {
+              const [track, artist] = key.split('|||');
+              return `${s.escapeHtml(track)}`;
+            });
+
+          tooltip.style("opacity", 1)
+            .html(`<strong>${formatHour(hour)}</strong><br>${s.formatMinutes(ms)} listened${topSongs.length > 0 ? '<br><span style="color:var(--text-muted)">' + topSongs.join('<br>') + '</span>' : ''}`);
+        }
+      });
+
+      col.addEventListener('mousemove', (e) => {
+        tooltip
+          .style("left", (e.pageX + 10) + "px")
+          .style("top", (e.pageY - 10) + "px");
+      });
+
+      col.addEventListener('mouseleave', () => {
+        tooltip.style("opacity", 0);
+      });
+    });
+  },
+
+  // === Show Day Detail ===
+  showDayDetail: function(date, skipHistory) {
+    const s = this;
+    // Use filtered data (respects both year and search filter)
+    const filteredData = s.getFilteredData();
     const dayKey = date.toDayKey();
-    const dayRecords = s.store.byDay.get(dayKey) || [];
+    const dayRecords = filteredData.filter(r => r.ts.toDayKey() === dayKey);
 
     if (dayRecords.length === 0) return;
 
     // Push current view to history before changing (if modal is already open)
     if (!skipHistory && !s.elements.modal.classList.contains('hidden')) {
-      s._pushCurrentToHistory(fullYearData);
+      s._pushCurrentToHistory();
     }
 
     // Track current view
@@ -552,23 +697,26 @@ window.swim = {
     s.elements.modalStreams.textContent = totalStreams;
     s.elements.modalTracks.textContent = uniqueTracks;
 
-    // Render clickable lists with full year data
-    s.renderModalLists(dayRecords, fullYearData);
+    // Render hourly breakdown chart
+    s.renderDayHourChart(dayRecords);
+
+    // Render clickable lists with filtered data
+    s.renderModalLists(dayRecords);
 
     s.openModal();
   },
 
   // === Show Song Detail ===
-  showSongDetail: function(track, artist, yearData, skipHistory) {
+  showSongDetail: function(track, artist, skipHistory) {
     const s = this;
-    // Always use full year data
-    const fullYearData = s.getYearData(s.store.currentYear);
-    const songRecords = fullYearData.filter(r => r.track === track && r.artist === artist);
+    // Use filtered data (respects both year and search filter)
+    const filteredData = s.getFilteredData();
+    const songRecords = filteredData.filter(r => r.track === track && r.artist === artist);
     if (songRecords.length === 0) return;
 
     // Push current view to history before changing (if modal is already open)
     if (!skipHistory && !s.elements.modal.classList.contains('hidden')) {
-      s._pushCurrentToHistory(fullYearData);
+      s._pushCurrentToHistory();
     }
 
     // Track current view
@@ -581,7 +729,7 @@ window.swim = {
     s.resetModalState();
 
     // Title
-    s.elements.modalDate.innerHTML = `${s.escapeHtml(track)}<span class="modal-subtitle">${s.escapeHtml(artist)} · Listening during ${s.store.currentYear}</span>`;
+    s.elements.modalDate.innerHTML = `${s.escapeHtml(track)}<span class="modal-subtitle">${s.escapeHtml(artist)} · Listening during ${s.getYearLabel()}</span>`;
 
     // Stats
     const totalMs = songRecords.reduce((sum, r) => sum + r.ms, 0);
@@ -598,22 +746,22 @@ window.swim = {
     s.elements.modalSongs.parentElement.classList.add('hidden');
 
     // Render timeline
-    s.renderTimeline(songRecords, { colorVar: '--songs-color', yearData: fullYearData });
+    s.renderTimeline(songRecords, { colorVar: '--songs-color', yearData: filteredData });
 
     s.openModal('song');
   },
 
   // === Show Artist Detail ===
-  showArtistDetail: function(artistName, yearData, skipHistory) {
+  showArtistDetail: function(artistName, skipHistory) {
     const s = this;
-    // Always use full year data
-    const fullYearData = s.getYearData(s.store.currentYear);
-    const artistRecords = fullYearData.filter(r => r.artist === artistName);
+    // Use filtered data (respects both year and search filter)
+    const filteredData = s.getFilteredData();
+    const artistRecords = filteredData.filter(r => r.artist === artistName);
     if (artistRecords.length === 0) return;
 
     // Push current view to history before changing (if modal is already open)
     if (!skipHistory && !s.elements.modal.classList.contains('hidden')) {
-      s._pushCurrentToHistory(fullYearData);
+      s._pushCurrentToHistory();
     }
 
     // Track current view
@@ -626,7 +774,7 @@ window.swim = {
     s.resetModalState();
 
     // Title
-    s.elements.modalDate.innerHTML = `${s.escapeHtml(artistName)}<span class="modal-subtitle">Listening throughout ${s.store.currentYear}</span>`;
+    s.elements.modalDate.innerHTML = `${s.escapeHtml(artistName)}<span class="modal-subtitle">Listening throughout ${s.getYearLabel()}</span>`;
 
     // Stats
     const totalMs = artistRecords.reduce((sum, r) => sum + r.ms, 0);
@@ -661,7 +809,6 @@ window.swim = {
 
     // Store songs for click handler
     s._modalSongs = topSongs;
-    s._modalYearData = fullYearData;
 
     // Add click handlers to songs in modal
     s.elements.modalSongs.querySelectorAll('.clickable-song').forEach(li => {
@@ -669,19 +816,19 @@ window.swim = {
         e.stopPropagation();
         const idx = parseInt(li.dataset.idx);
         const song = s._modalSongs[idx];
-        s.showSongDetail(song.track, song.artist, fullYearData);
+        s.showSongDetail(song.track, song.artist);
       });
     });
 
     // Render timeline chart
-    s.renderTimeline(artistRecords, { colorVar: '--artists-color', yearData: fullYearData });
+    s.renderTimeline(artistRecords, { colorVar: '--artists-color', yearData: filteredData });
 
     s.openModal('artist');
   },
 
   // === Render Clickable Modal Lists ===
   // Helper to render clickable artist/song lists in modals
-  renderModalLists: function(records, yearData) {
+  renderModalLists: function(records) {
     const s = this;
 
     // Top Artists
@@ -727,14 +874,13 @@ window.swim = {
     // Store for click handlers
     s._modalArtists = topArtists.map(([name]) => name);
     s._modalSongs = topSongs;
-    s._modalYearData = yearData;
 
     // Add click handlers
     s.elements.modalArtists.querySelectorAll('.clickable-artist').forEach(li => {
       li.addEventListener('click', (e) => {
         e.stopPropagation();
         const idx = parseInt(li.dataset.idx);
-        s.showArtistDetail(s._modalArtists[idx], s._modalYearData);
+        s.showArtistDetail(s._modalArtists[idx]);
       });
     });
 
@@ -743,14 +889,14 @@ window.swim = {
         e.stopPropagation();
         const idx = parseInt(li.dataset.idx);
         const song = s._modalSongs[idx];
-        s.showSongDetail(song.track, song.artist, s._modalYearData);
+        s.showSongDetail(song.track, song.artist);
       });
     });
   },
 
   // === Render all panels ===
   renderAll: function() {
-    const data = this.getYearData(this.store.currentYear);
+    const data = this.getFilteredData();
     this.panels.forEach(fn => fn(data));
   },
 };
@@ -775,8 +921,11 @@ document.addEventListener('DOMContentLoaded', function() {
     fileInput: document.getElementById("selectFiles"),
     importBtn: document.getElementById("import"),
     yearSelect: document.getElementById("yearSelect"),
+    searchFilter: document.getElementById("searchFilter"),
     emptyState: document.getElementById("emptyState"),
     dashboard: document.getElementById("dashboardContent"),
+    statsTitle: document.getElementById("statsTitle"),
+    timelineTitle: document.getElementById("timelineTitle"),
     totalHours: document.getElementById("totalHours"),
     totalStreams: document.getElementById("totalStreams"),
     uniqueArtists: document.getElementById("uniqueArtists"),
@@ -795,6 +944,7 @@ document.addEventListener('DOMContentLoaded', function() {
     modalArtists: document.getElementById("modalArtists"),
     modalSongs: document.getElementById("modalSongs"),
     modalTimeline: document.getElementById("modalTimeline"),
+    modalHourChart: document.getElementById("modalHourChart"),
     modalBack: document.getElementById("modalBack"),
     modalForward: document.getElementById("modalForward"),
   };
@@ -937,50 +1087,17 @@ document.addEventListener('DOMContentLoaded', function() {
     populateYearSelect();
     showDashboard();
   }
-  /*
-  function processData() {
-    s.store.byDay.clear();
-    s.store.years.clear();
-    s.store.songDurations.clear();
-
-    // song|artist -> list of song durations 
-    durations = new Map();
-
-    for (const rec of s.store.raw) {
-      if (!rec.ts) continue;
-
-      const key = rec.ts.toDayKey();
-      s.store.years.add(rec.ts.getFullYear());
-
-      if (s.store.byDay.has(key)) {
-        s.store.byDay.get(key).push(rec);
-      } else {
-        s.store.byDay.set(key, [rec]);
-      }
-
-      if (rec.track) {
-
-        // append the current duration onto the map 
-        durations.set(`${rec.track}|||${rec.artist}`, [
-          ...(durations.get(`${rec.track}|||${rec.artist}`) || []),
-          rec.ms
-        ]);
-        const songKey = `${rec.track}|||${rec.artist}`;
-        const currentMax = s.store.songDurations.get(songKey) || 0;
-        s.store.songDurations.set(songKey, Math.max(currentMax, rec.ms));
-      }
-    }
-
-    s.store.byDay = new Map([...s.store.byDay.entries()].sort());
-    populateYearSelect();
-    showDashboard();
-  }
-  */
 
   function populateYearSelect() {
     const select = s.elements.yearSelect;
     select.innerHTML = "";
     const sortedYears = [...s.store.years].sort((a, b) => b - a);
+
+    // Add "All Years" option
+    const allOpt = document.createElement("option");
+    allOpt.value = "all";
+    allOpt.text = "All Years";
+    select.add(allOpt);
 
     sortedYears.forEach((year) => {
       const opt = document.createElement("option");
@@ -994,8 +1111,22 @@ document.addEventListener('DOMContentLoaded', function() {
     select.value = s.store.currentYear;
 
     select.onchange = function() {
-      s.store.currentYear = parseInt(this.value);
+      s.store.currentYear = this.value === "all" ? null : parseInt(this.value);
       s.renderAll();
+    };
+
+    // Enable and set up search filter
+    s.elements.searchFilter.disabled = false;
+    s.elements.searchFilter.value = "";
+    s.store.currentFilter = "";
+
+    let debounceTimer;
+    s.elements.searchFilter.oninput = function() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        s.store.currentFilter = this.value;
+        s.renderAll();
+      }, 300);
     };
   }
 
