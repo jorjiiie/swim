@@ -11,6 +11,7 @@
   <script src="https://d3js.org/d3.v4.js"></script>
   <script src="core.js" defer></script>
   <script src="panels/stats.js" defer></script>
+  <script src="panels/overview-timeline.js" defer></script>
   <script src="panels/top-artists.js" defer></script>
   <script src="panels/top-songs.js" defer></script>
   <script src="panels/heatmap.js" defer></script>
@@ -71,6 +72,13 @@
         </div>
       </section>
 
+      <!-- Overview Timeline -->
+      <section class="overview-timeline-section">
+        <h2 class="card-title">Year in Review</h2>
+        <p class="card-hint">Click any day to explore</p>
+        <div id="overviewTimeline"></div>
+      </section>
+
       <!-- Top Lists -->
       <section class="top-lists">
         <div class="top-list-section top-list-artists">
@@ -94,7 +102,13 @@
       <div id="dailyModal" class="modal hidden">
         <div class="modal-backdrop"></div>
         <div class="modal-content">
-          <button class="modal-close" id="closeModal">×</button>
+          <div class="modal-nav">
+            <div class="modal-nav-buttons">
+              <button class="modal-nav-btn disabled" id="modalBack" title="Back">←</button>
+              <button class="modal-nav-btn disabled" id="modalForward" title="Forward">→</button>
+            </div>
+            <button class="modal-close" id="closeModal">×</button>
+          </div>
           <h2 class="modal-title" id="modalDate">Date</h2>
           <div class="modal-stats">
             <div class="modal-stat">

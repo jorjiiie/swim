@@ -77,68 +77,6 @@ swim.registerPanel(function(data) {
     })
     .on("click", function(d) {
       tooltip.style("opacity", 0);
-      showDailyDetail(d.date);
+      s.showDayDetail(d.date, data, false);
     });
-
-  function showDailyDetail(date) {
-    const dayKey = date.toDayKey();
-    const dayRecords = s.store.byDay.get(dayKey) || [];
-
-    if (dayRecords.length === 0) return;
-
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    s.elements.modalDate.textContent = date.toLocaleDateString('en-US', options);
-
-    const totalMs = dayRecords.reduce((sum, r) => sum + r.ms, 0);
-    const uniqueTracks = new Set(dayRecords.map(r => `${r.track}|||${r.artist}`).filter(Boolean)).size;
-
-    const songData = s.aggregateSongs(dayRecords);
-    const totalStreams = [...songData.values()].reduce((sum, song) => sum + song.streams, 0);
-
-    s.elements.modalTime.textContent = s.formatMinutes(totalMs);
-    s.elements.modalStreams.textContent = totalStreams;
-    s.elements.modalTracks.textContent = uniqueTracks;
-
-    // Top Artists
-    const artistMap = new Map();
-    for (const r of dayRecords) {
-      if (!r.artist) continue;
-      artistMap.set(r.artist, (artistMap.get(r.artist) || 0) + r.ms);
-    }
-
-    const topArtists = [...artistMap.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-
-    s.elements.modalArtists.innerHTML = topArtists
-      .map(([name, ms]) => `
-        <li>
-          <div class="list-item-info">
-            <div class="list-item-name">${s.escapeHtml(name)}</div>
-          </div>
-          <span class="list-item-stat">${s.formatMinutes(ms)}</span>
-        </li>
-      `).join("");
-
-    // Top Songs
-    const topSongs = [...songData.values()]
-      .sort((a, b) => b.totalMs - a.totalMs)
-      .slice(0, 5);
-
-    s.elements.modalSongs.innerHTML = topSongs
-      .map((song) => `
-        <li>
-          <div class="list-item-info">
-            <div class="list-item-name">${s.escapeHtml(song.track)}</div>
-            <div class="list-item-detail">${s.escapeHtml(song.artist || "Unknown")}</div>
-          </div>
-          <span class="list-item-stat">
-            ${s.formatMinutes(song.totalMs)}
-            <span class="list-item-streams"> · ${song.streams}×</span>
-          </span>
-        </li>
-      `).join("");
-
-    s.openModal();
-  }
 });

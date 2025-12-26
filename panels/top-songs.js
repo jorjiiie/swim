@@ -7,8 +7,8 @@ swim.registerPanel(function(data) {
     .slice(0, 10);
 
   s.elements.topSongs.innerHTML = sorted
-    .map((song) => `
-      <li>
+    .map((song, idx) => `
+      <li data-idx="${idx}">
         <div class="list-item-info">
           <div class="list-item-name">${s.escapeHtml(song.track)}</div>
           <div class="list-item-detail">${s.escapeHtml(song.artist || "Unknown")}</div>
@@ -18,4 +18,13 @@ swim.registerPanel(function(data) {
         </span>
       </li>
     `).join("");
+
+  // Add click handlers
+  s.elements.topSongs.querySelectorAll('li').forEach(li => {
+    li.addEventListener('click', () => {
+      const idx = parseInt(li.dataset.idx);
+      const song = sorted[idx];
+      s.showSongDetail(song.track, song.artist, data);
+    });
+  });
 });

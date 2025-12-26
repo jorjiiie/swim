@@ -35,8 +35,19 @@ swim.registerPanel(function(data) {
   });
 
   function showHourDetail(hour, yearData) {
-    const hourRecords = yearData.filter(r => r.ts.getHours() === hour);
+    // Always use full year data
+    const fullYearData = s.getYearData(s.store.currentYear);
+    const hourRecords = fullYearData.filter(r => r.ts.getHours() === hour);
     if (hourRecords.length === 0) return;
+
+    // Track current view for history
+    s._currentArtist = null;
+    s._currentSong = null;
+    s._currentDay = null;
+    s._currentHour = hour;
+    s._currentDayOfWeek = null;
+
+    s.resetModalState();
 
     let hourLabel;
     if (hour === 0) hourLabel = "12:00 AM";
@@ -55,46 +66,12 @@ swim.registerPanel(function(data) {
     s.elements.modalStreams.textContent = totalStreams.toLocaleString();
     s.elements.modalTracks.textContent = uniqueTracks.toLocaleString();
 
-    // Top Artists
-    const artistMap = new Map();
-    for (const r of hourRecords) {
-      if (!r.artist) continue;
-      artistMap.set(r.artist, (artistMap.get(r.artist) || 0) + r.ms);
-    }
-
-    const topArtists = [...artistMap.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-
-    s.elements.modalArtists.innerHTML = topArtists
-      .map(([name, ms]) => `
-        <li>
-          <div class="list-item-info">
-            <div class="list-item-name">${s.escapeHtml(name)}</div>
-          </div>
-          <span class="list-item-stat">${s.formatMinutes(ms)}</span>
-        </li>
-      `).join("");
-
-    // Top Songs
-    const topSongs = [...songData.values()]
-      .sort((a, b) => b.totalMs - a.totalMs)
-      .slice(0, 5);
-
-    s.elements.modalSongs.innerHTML = topSongs
-      .map((song) => `
-        <li>
-          <div class="list-item-info">
-            <div class="list-item-name">${s.escapeHtml(song.track)}</div>
-            <div class="list-item-detail">${s.escapeHtml(song.artist || "Unknown")}</div>
-          </div>
-          <span class="list-item-stat">
-            ${s.formatMinutes(song.totalMs)}
-            <span class="list-item-streams"> · ${song.streams}×</span>
-          </span>
-        </li>
-      `).join("");
+    // Render clickable lists with full year data
+    s.renderModalLists(hourRecords, fullYearData);
 
     s.openModal('hour');
   }
+
+  // Store showHourDetail on swim for history navigation
+  s._showHourDetail = showHourDetail;
 });
