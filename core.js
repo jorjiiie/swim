@@ -62,8 +62,19 @@ window.swim = {
 
     // Calculate estimated streams using global max duration
     for (const [key, song] of map.entries()) {
-      const globalMax = this.store.songDurations.get(key) || song.totalMs;
-      song.streams = Math.max(1, Math.round(song.totalMs / globalMax));
+      if (song.totalMs <= 0) {
+        song.streams = 0;
+        continue;
+      }
+
+      const raw = this.store.songDurations.get(key);
+      const globalMax =
+        Number.isFinite(raw) && raw > 0 ? raw : song.totalMs;
+
+      song.streams = Math.max(
+        1,
+        Math.round(song.totalMs / globalMax)
+      );
     }
 
     return map;
@@ -767,6 +778,7 @@ document.addEventListener('DOMContentLoaded', function() {
     emptyState: document.getElementById("emptyState"),
     dashboard: document.getElementById("dashboardContent"),
     totalHours: document.getElementById("totalHours"),
+    totalStreams: document.getElementById("totalStreams"),
     uniqueArtists: document.getElementById("uniqueArtists"),
     uniqueTracks: document.getElementById("uniqueTracks"),
     avgDaily: document.getElementById("avgDaily"),
@@ -845,6 +857,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const sorted = [...values].sort((a, b) => a - b);
 
     // drop extreme corruption (top 0.1%)
+    // rzhu: low confidence this is good, as the max is usually okay (sans clustering!)
     const cutoff = Math.floor(sorted.length * 0.999);
     const clean = sorted.slice(0, Math.max(cutoff, 1));
 
@@ -868,8 +881,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     let best = null;
+    // rzhu: heuristic is require >5 occurrences to avoid small-sample noise
     for (const [v, c] of counts) {
-      if (c > 1 && (best === null || v > best)) {
+      if (c > 5 && (best === null || v > best)) {
         best = v;
       }
     }
