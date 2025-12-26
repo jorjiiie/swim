@@ -304,8 +304,45 @@ window.swim = {
       }
       return backward;
     }
+    function bucketedEnvelope(values, intervalDays = 4, smoothFactor = 0.3) {
+      if (!values.length) return [];
 
-    const smoothedValues = zeroPhase(values);
+      const n = values.length;
+      const envelope = new Array(n);
+
+      // Step 1: bucket max over intervalDays
+      const bucketMax = [];
+      for (let i = 0; i < n; i += intervalDays) {
+        let maxVal = 0;
+        for (let j = i; j < Math.min(i + intervalDays, n); j++) {
+          maxVal = Math.max(maxVal, values[j]);
+        }
+        bucketMax.push(maxVal);
+      }
+
+      // Step 2: interpolate daily between buckets
+      for (let i = 0; i < n; i++) {
+        const bucketIdx = Math.floor(i / intervalDays);
+        const nextBucketIdx = Math.min(bucketIdx + 1, bucketMax.length - 1);
+        const t = (i % intervalDays) / intervalDays;
+        envelope[i] = bucketMax[bucketIdx] + t * (bucketMax[nextBucketIdx] - bucketMax[bucketIdx]);
+      }
+
+      // Step 3: optional forward EMA smoothing
+      if (smoothFactor > 0) {
+        let prev = envelope[0];
+        for (let i = 0; i < n; i++) {
+          envelope[i] = smoothFactor * envelope[i] + (1 - smoothFactor) * prev;
+          prev = envelope[i];
+        }
+      }
+
+      return envelope;
+    }
+
+
+    //const smoothedValues = zeroPhase(values);
+    const smoothedValues = bucketedEnvelope(values, 4, 0.5);
     const maxSmoothed = Math.max(...smoothedValues, 1);
     const normalizedValues = smoothedValues.map(v => v / maxSmoothed);
 
