@@ -92,7 +92,10 @@ window.swim = {
     // Reset modal state
     this.resetModalState();
     // Remove any lingering tooltips
-    d3.selectAll('.timeline-tooltip').remove();
+
+    if (this.tooltip) {
+      this.tooltip.style("opacity", 0);
+    }
   },
 
   resetModalState: function() {
@@ -394,9 +397,7 @@ window.swim = {
     svg.selectAll(".domain, .tick line").attr("stroke", "var(--border)");
 
     // Tooltip and hover
-    const tooltip = d3.select("body").append("div")
-      .attr("class", "timeline-tooltip")
-      .style("opacity", 0);
+    const tooltip = s.tooltip; // use persistent tooltip
 
     const hoverLine = svg.append("line")
       .attr("stroke", "var(--text-muted)")
@@ -748,6 +749,18 @@ document.addEventListener('DOMContentLoaded', function() {
     modalBack: document.getElementById("modalBack"),
     modalForward: document.getElementById("modalForward"),
   };
+
+  let tooltip = d3.select("body").selectAll('.timeline-tooltip');
+  if (tooltip.empty()) {
+    tooltip = d3.select("body")
+      .append("div")
+      .attr("class", "timeline-tooltip")
+      .style("opacity", 0)
+      .style("position", "absolute")
+      .style("pointer-events", "none"); // avoids blocking hover events
+  }
+  swim.tooltip = tooltip;
+
 
   // Modal controls
   document.getElementById("closeModal").onclick = () => s.closeModal();
