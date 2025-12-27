@@ -69,6 +69,8 @@ window.swim = {
   },
 
   // Get data filtered by year AND search filter
+  // this can control lots of the stuff!
+  // songs okay, podcasts bad.
   getFilteredData: function() {
     let data = this.getYearData(this.store.currentYear);
 
@@ -292,7 +294,7 @@ window.swim = {
 
   // === Timeline Chart ===
   // Renders a timeline chart for the given records
-  // options: { colorVar, container, width, height, yearData }
+  // options: { colorVar, container, width, height, yearData, zoomStart, zoomEnd }
   renderTimeline: function(records, options) {
     const s = this;
     const opts = Object.assign({
@@ -300,7 +302,9 @@ window.swim = {
       container: s.elements.modalTimeline,
       width: 560,
       height: 140,
-      yearData: null
+      yearData: null,
+      zoomStart: null,
+      zoomEnd: null
     }, options);
 
     const container = typeof opts.container === 'string'
@@ -320,21 +324,34 @@ window.swim = {
     }
 
     // Create date range (full year or all data range)
-    let startDate, endDate;
+    let fullStartDate, fullEndDate;
     if (s.store.currentYear === null) {
       // All years - use data range
       const dates = records.map(r => r.ts).filter(Boolean);
       if (dates.length === 0) return;
-      startDate = new Date(Math.min(...dates));
-      endDate = new Date(Math.max(...dates));
+      fullStartDate = new Date(Math.min(...dates));
+      fullEndDate = new Date(Math.max(...dates));
       // Extend to full months
-      startDate.setDate(1);
-      endDate.setMonth(endDate.getMonth() + 1, 0);
+      fullStartDate.setDate(1);
+      fullEndDate.setMonth(fullEndDate.getMonth() + 1, 0);
     } else {
       const year = s.store.currentYear;
-      startDate = new Date(year, 0, 1);
-      endDate = new Date(year, 11, 31);
+      fullStartDate = new Date(year, 0, 1);
+      fullEndDate = new Date(year, 11, 31);
     }
+
+    // Use zoom range if provided, otherwise full range
+    const startDate = opts.zoomStart || fullStartDate;
+    const endDate = opts.zoomEnd || fullEndDate;
+    const isZoomed = opts.zoomStart !== null && opts.zoomEnd !== null;
+
+    // Store original options for reset
+    container._timelineOpts = {
+      records: records,
+      baseOptions: Object.assign({}, opts, { zoomStart: null, zoomEnd: null }),
+      fullStartDate: fullStartDate,
+      fullEndDate: fullEndDate
+    };
 
     const chartData = [];
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
@@ -477,18 +494,29 @@ window.swim = {
       .attr("stroke-width", 2)
       .attr("d", line);
 
-    // X axis - show years for multi-year, months for single year
+    // X axis - adapt based on date range
     let xAxis;
-    if (s.store.currentYear === null) {
+    const rangeDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
+    if (rangeDays > 365 * 2) {
       // Multi-year: show years
       xAxis = d3.axisBottom(xScale)
         .ticks(d3.timeYear.every(1))
         .tickFormat(d3.timeFormat("%Y"));
-    } else {
-      // Single year: show months
+    } else if (rangeDays > 90) {
+      // Several months: show months
       xAxis = d3.axisBottom(xScale)
         .ticks(d3.timeMonth.every(1))
         .tickFormat(d3.timeFormat("%b"));
+    } else if (rangeDays > 14) {
+      // Weeks: show week starts
+      xAxis = d3.axisBottom(xScale)
+        .ticks(d3.timeWeek.every(1))
+        .tickFormat(d3.timeFormat("%b %d"));
+    } else {
+      // Days: show individual days
+      xAxis = d3.axisBottom(xScale)
+        .ticks(d3.timeDay.every(1))
+        .tickFormat(d3.timeFormat("%b %d"));
     }
 
     svg.append("g")
@@ -531,42 +559,154 @@ window.swim = {
     }
 
 
-    svg.append("rect")
+    // Selection rectangle for drag-to-zoom
+    const selectionRect = svg.append("rect")
+      .attr("class", "zoom-selection")
+      .attr("y", 0)
+      .attr("height", innerHeight)
+      .attr("fill", `var(${colorVar})`)
+      .attr("fill-opacity", 0.2)
+      .attr("stroke", `var(${colorVar})`)
+      .attr("stroke-width", 1)
+      .style("display", "none");
+
+    // Zoom reset hint (shown when zoomed)
+    if (isZoomed) {
+      svg.append("text")
+        .attr("x", innerWidth - 5)
+        .attr("y", -5)
+        .attr("text-anchor", "end")
+        .attr("fill", "var(--text-muted)")
+        .attr("font-size", "10px")
+        .text("Double-click to reset zoom");
+    }
+
+    // Drag state
+    let isDragging = false;
+    let dragStartX = null;
+    let dragStartDate = null;
+    let wasDrag = false;
+    let clickTimeout = null;
+
+    const interactionRect = svg.append("rect")
       .attr("width", innerWidth)
       .attr("height", innerHeight)
       .attr("fill", "transparent")
-      .style("cursor", "pointer")
+      .style("cursor", "crosshair")
+      .on("mousedown", function() {
+        const mouseX = d3.mouse(this)[0];
+        isDragging = true;
+        wasDrag = false;
+        dragStartX = mouseX;
+        dragStartDate = xScale.invert(mouseX);
+        selectionRect
+          .attr("x", mouseX)
+          .attr("width", 0)
+          .style("display", "block");
+      })
       .on("mousemove", function() {
-        const point = getClosestPoint(d3.mouse(this)[0]);
-        if (!point) return;
+        const mouseX = d3.mouse(this)[0];
 
-        const d = point.data;
-        const x = xScale(d.date);
-        const y = yScale(rawData[point.idx].value);
+        if (isDragging) {
+          // Update selection rectangle
+          const x1 = Math.min(dragStartX, mouseX);
+          const x2 = Math.max(dragStartX, mouseX);
+          selectionRect
+            .attr("x", x1)
+            .attr("width", x2 - x1);
 
-        hoverLine.attr("x1", x).attr("x2", x).style("opacity", 1);
-        hoverDot.attr("cx", x).attr("cy", y).style("opacity", 1);
+          // Hide hover elements during drag
+          hoverLine.style("opacity", 0);
+          hoverDot.style("opacity", 0);
+          tooltip.style("opacity", 0);
+        } else {
+          // Normal hover behavior
+          const point = getClosestPoint(mouseX);
+          if (!point) return;
 
-        const dateStr = d.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        tooltip
-          .style("opacity", 1)
-          .html(`<strong>${dateStr}</strong>${d.ms > 0 ? s.formatMinutes(d.ms) + ' listened' : 'No listening'}<br><span style="color:var(--text-muted)">Click to view details</span>`)
-          .style("left", (d3.event.pageX + 10) + "px")
-          .style("top", (d3.event.pageY - 10) + "px");
+          const d = point.data;
+          const x = xScale(d.date);
+          const y = yScale(rawData[point.idx].value);
+
+          hoverLine.attr("x1", x).attr("x2", x).style("opacity", 1);
+          hoverDot.attr("cx", x).attr("cy", y).style("opacity", 1);
+
+          const dateStr = d.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          tooltip
+            .style("opacity", 1)
+            .html(`<strong>${dateStr}</strong>${d.ms > 0 ? s.formatMinutes(d.ms) + ' listened' : 'No listening'}<br><span style="color:var(--text-muted)">Click to view · Drag to zoom</span>`)
+            .style("left", (d3.event.pageX + 10) + "px")
+            .style("top", (d3.event.pageY - 10) + "px");
+        }
+      })
+      .on("mouseup", function() {
+        if (!isDragging) return;
+        isDragging = false;
+        selectionRect.style("display", "none");
+
+        const mouseX = d3.mouse(this)[0];
+        const dragEndDate = xScale.invert(mouseX);
+
+        // Only zoom if dragged more than 10 pixels
+        if (Math.abs(mouseX - dragStartX) > 10) {
+          wasDrag = true;
+          const zoomStart = new Date(Math.min(dragStartDate, dragEndDate));
+          const zoomEnd = new Date(Math.max(dragStartDate, dragEndDate));
+
+          // Re-render with zoomed range
+          s.renderTimeline(records, Object.assign({}, opts, {
+            zoomStart: zoomStart,
+            zoomEnd: zoomEnd
+          }));
+        }
+
+        dragStartX = null;
+        dragStartDate = null;
       })
       .on("mouseout", function() {
+        if (isDragging) return; // Don't interrupt drag
         hoverLine.style("opacity", 0);
         hoverDot.style("opacity", 0);
         tooltip.style("opacity", 0);
       })
       .on("click", function() {
-        const point = getClosestPoint(d3.mouse(this)[0]);
-        if (!point) return;
+        if (wasDrag) return; // Was a drag, not click
 
-        tooltip.style("opacity", 0);
-        // Don't skip history - if modal is open, we want to save current view
-        s.showDayDetail(point.data.date, false);
+        const mouseX = d3.mouse(this)[0];
+
+        // Delay click to allow double-click to cancel it
+        if (clickTimeout) clearTimeout(clickTimeout);
+        clickTimeout = setTimeout(() => {
+          const point = getClosestPoint(mouseX);
+          if (!point) return;
+
+          tooltip.style("opacity", 0);
+          s.showDayDetail(point.data.date, false);
+        }, 250);
+      })
+      .on("dblclick", function() {
+        // Cancel pending click
+        if (clickTimeout) {
+          clearTimeout(clickTimeout);
+          clickTimeout = null;
+        }
+
+        // Reset zoom on double-click
+        if (isZoomed && container._timelineOpts) {
+          const origOpts = container._timelineOpts;
+          s.renderTimeline(origOpts.records, origOpts.baseOptions);
+        }
       });
+
+    // Handle mouse leaving SVG during drag
+    d3.select(container).select("svg").on("mouseleave", function() {
+      if (isDragging) {
+        isDragging = false;
+        selectionRect.style("display", "none");
+        dragStartX = null;
+        dragStartDate = null;
+      }
+    });
   },
 
   // === Render Day Hour Chart ===
