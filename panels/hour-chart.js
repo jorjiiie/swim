@@ -14,22 +14,28 @@ swim.registerPanel(function(data) {
     return i < 12 ? `${i}a` : `${i - 12}p`;
   });
 
-  s.elements.hourChart.innerHTML = `<div class="bar-chart">${
+  // Full hour labels for tooltips
+  const fullLabels = hours.map((_, i) => {
+    if (i === 0) return "12:00 AM";
+    if (i === 12) return "12:00 PM";
+    return i < 12 ? `${i}:00 AM` : `${i - 12}:00 PM`;
+  });
+
+  s.elements.hourChart.innerHTML = `<div class="bar-chart-vertical">${
     hours.map((ms, i) => `
-      <div class="bar-row" data-hour="${i}">
-        <span class="bar-label">${labels[i]}</span>
-        <div class="bar-track">
-          <div class="bar-fill" style="width: ${max > 0 ? (ms / max) * 100 : 0}%"></div>
+      <div class="bar-col" data-hour="${i}" title="${fullLabels[i]}: ${s.formatMinutes(ms)}">
+        <div class="bar-track-v">
+          <div class="bar-fill-v" style="height: ${max > 0 ? (ms / max) * 100 : 0}%"></div>
         </div>
-        <span class="bar-value">${s.formatMinutes(ms)}</span>
+        <span class="bar-label-v">${labels[i]}</span>
       </div>
     `).join("")
   }</div>`;
 
   // Click handlers
-  s.elements.hourChart.querySelectorAll('.bar-row').forEach(row => {
-    row.addEventListener('click', () => {
-      const hour = parseInt(row.dataset.hour);
+  s.elements.hourChart.querySelectorAll('.bar-col').forEach(col => {
+    col.addEventListener('click', () => {
+      const hour = parseInt(col.dataset.hour);
       showHourDetail(hour);
     });
   });
@@ -55,7 +61,7 @@ swim.registerPanel(function(data) {
     else if (hour < 12) hourLabel = `${hour}:00 AM`;
     else hourLabel = `${hour - 12}:00 PM`;
 
-    s.elements.modalDate.innerHTML = `${hourLabel}<span class="modal-subtitle">All listening during this hour in ${s.getYearLabel()}</span>`;
+    s.elements.modalDate.innerHTML = `${hourLabel}<span class="modal-subtitle">All listening during this hour · ${s.getFilterDescription()}</span>`;
 
     const totalMs = hourRecords.reduce((sum, r) => sum + r.ms, 0);
     const uniqueTracks = new Set(hourRecords.map(r => `${r.track}|||${r.artist}`).filter(Boolean)).size;

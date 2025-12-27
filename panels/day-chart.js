@@ -10,22 +10,23 @@ swim.registerPanel(function(data) {
 
   const max = Math.max(...days);
 
-  s.elements.dayChart.innerHTML = `<div class="bar-chart">${
+  const fullLabels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+  s.elements.dayChart.innerHTML = `<div class="bar-chart-vertical">${
     days.map((ms, i) => `
-      <div class="bar-row" data-day="${i}">
-        <span class="bar-label">${labels[i]}</span>
-        <div class="bar-track">
-          <div class="bar-fill" style="width: ${max > 0 ? (ms / max) * 100 : 0}%"></div>
+      <div class="bar-col" data-day="${i}" title="${fullLabels[i]}: ${s.formatMinutes(ms)}">
+        <div class="bar-track-v">
+          <div class="bar-fill-v" style="height: ${max > 0 ? (ms / max) * 100 : 0}%"></div>
         </div>
-        <span class="bar-value">${s.formatMinutes(ms)}</span>
+        <span class="bar-label-v">${labels[i]}</span>
       </div>
     `).join("")
   }</div>`;
 
   // Click handlers
-  s.elements.dayChart.querySelectorAll('.bar-row').forEach(row => {
-    row.addEventListener('click', () => {
-      const day = parseInt(row.dataset.day);
+  s.elements.dayChart.querySelectorAll('.bar-col').forEach(col => {
+    col.addEventListener('click', () => {
+      const day = parseInt(col.dataset.day);
       showDayOfWeekDetail(day);
     });
   });
@@ -47,7 +48,7 @@ swim.registerPanel(function(data) {
 
     s.resetModalState();
 
-    s.elements.modalDate.innerHTML = `${dayLabels[dayIndex]}s<span class="modal-subtitle">All listening on ${dayLabels[dayIndex]}s in ${s.getYearLabel()}</span>`;
+    s.elements.modalDate.innerHTML = `${dayLabels[dayIndex]}s<span class="modal-subtitle">All listening on ${dayLabels[dayIndex]}s · ${s.getFilterDescription()}</span>`;
 
     const totalMs = dayRecords.reduce((sum, r) => sum + r.ms, 0);
     const uniqueTracks = new Set(dayRecords.map(r => `${r.track}|||${r.artist}`).filter(Boolean)).size;
