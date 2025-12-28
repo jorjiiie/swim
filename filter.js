@@ -157,6 +157,15 @@
         return result;
       }
 
+      // Bare boolean predicates (is_podcast, is_track) without parens
+      if (tok?.type === 'word') {
+        const name = tok.value.toLowerCase();
+        if (name === 'is_podcast' || name === 'is_track') {
+          consume('word');
+          return { type: 'boolean', field: name };
+        }
+      }
+
       // Bare value - shouldn't happen at top level in well-formed input
       throw new Error(`Unexpected token: ${JSON.stringify(tok)}`);
     }

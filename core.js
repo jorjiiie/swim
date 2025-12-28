@@ -179,6 +179,7 @@ window.swim = Object.assign(window.swim || {}, {
           track: r.track,
           artist: r.artist,
           totalMs: r.ms,
+          isPodcast: r.isPodcast,
         });
       }
     }
@@ -187,6 +188,12 @@ window.swim = Object.assign(window.swim || {}, {
     for (const [key, song] of map.entries()) {
       if (song.totalMs <= 0) {
         song.streams = 0;
+        continue;
+      }
+
+      // Podcasts always count as 1 stream (can't estimate listens)
+      if (song.isPodcast) {
+        song.streams = 1;
         continue;
       }
 
