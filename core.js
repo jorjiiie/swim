@@ -1225,47 +1225,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
   function inferSongDuration(values, eps = 2000) {
-    if (values.length === 0) return null;
+    if (values.length === 0) return null; 
 
-    // sort ascending
-    const sorted = [...values].sort((a, b) => a - b);
-
-    // drop extreme corruption (top 0.1%)
-    // rzhu: low confidence this is good, as the max is usually okay (sans clustering!)
-    const cutoff = Math.floor(sorted.length * 0.999);
-    const clean = sorted.slice(0, Math.max(cutoff, 1));
-
-    // --- 1) upper-end clustering ---
-    const k = Math.min(10, clean.length);
-    const top = clean.slice(-k);
-
-    const mean =
-      top.reduce((a, b) => a + b, 0) / top.length;
-    const variance =
-      top.reduce((a, b) => a + (b - mean) ** 2, 0) / top.length;
-
-    if (Math.sqrt(variance) < eps) {
-      return Math.round(mean);
-    }
-
-    // --- 2) repeated values ---
     const counts = new Map();
-    for (const v of clean) {
+    for (const v of values) {
       counts.set(v, (counts.get(v) || 0) + 1);
     }
-
     let best = null;
-    // rzhu: heuristic is require >5 occurrences to avoid small-sample noise
     for (const [v, c] of counts) {
-      if (c > 5 && (best === null || v > best)) {
+      if (c > 1 && (best === null || v > best)) {
         best = v;
       }
     }
 
-    if (best !== null) return best;
+    // surely a song must be longer than 1 second
+    if (best !== null && best > 1000) return best;
 
-    // --- 3) information-theoretic fallback ---
-    return Math.max(...clean);
+    return Math.max(...values);
   }
 
   function processData() {
