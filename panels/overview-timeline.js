@@ -3,7 +3,11 @@ swim.registerPanel(function(data) {
   const s = swim;
 
   // Update title based on current view
-  if (s.store.currentYear === null) {
+  const { start, end } = s.store.dateRange;
+  if (start && end) {
+    // Zoomed view
+    s.elements.timelineTitle.textContent = s.getFilterDescription();
+  } else if (s.store.currentYear === null) {
     s.elements.timelineTitle.textContent = "Listening History";
   } else {
     s.elements.timelineTitle.textContent = `${s.store.currentYear} in Review`;
@@ -14,6 +18,7 @@ swim.registerPanel(function(data) {
     container: 'overviewTimeline',
     width: 1100,
     height: 160,
-    yearData: data
+    yearData: data,
+    isGlobal: true
   });
 });

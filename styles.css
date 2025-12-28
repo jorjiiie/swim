@@ -75,25 +75,114 @@ body {
   gap: 0.5rem;
 }
 
-.file-input input[type="file"] { display: none; }
+/* Import button */
+.import-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
 
-.file-button, .btn {
+.import-btn input[type="file"] { display: none; }
+
+.import-btn-text {
+  padding: 0 1rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  background: var(--text);
+  color: var(--bg);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  min-width: 70px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  box-sizing: border-box;
+}
+
+.import-btn:hover .import-btn-text { opacity: 0.85; }
+
+.import-btn-text.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Info button */
+.info-btn {
+  padding: 0 1rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: var(--border);
+  color: var(--text);
+  border: none;
+  white-space: nowrap;
+  min-width: 70px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  box-sizing: border-box;
+}
+
+.info-btn:hover {
+  opacity: 0.8;
+}
+
+/* Info modal */
+.info-modal-content {
+  max-width: 500px;
+}
+
+.info-modal-body {
+  text-align: left;
+}
+
+.info-modal-body section {
+  margin-bottom: 1.5rem;
+}
+
+.info-modal-body section:last-child {
+  margin-bottom: 0;
+}
+
+.info-modal-body h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: var(--text);
+}
+
+.info-modal-body p {
+  margin: 0.4rem 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.info-modal-body a {
+  color: var(--stats-color);
+}
+
+.info-modal-body code {
+  background: var(--border);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.btn {
   padding: 0.5rem 1rem;
   border-radius: 8px;
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
-}
-
-.file-button {
-  background: var(--bg);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-
-.file-button:hover { 
-  background: var(--border);
 }
 
 .btn-primary {

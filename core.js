@@ -8,6 +8,7 @@ window.swim = {
     years: new Set(),
     currentYear: null,  // null means "all years"
     currentFilter: "",
+    dateRange: { start: null, end: null },  // zoom date filter
   },
 
   // Modal navigation history
@@ -54,7 +55,7 @@ window.swim = {
         // Calculate duration based on text length (50px per second)
         const scrollText = el.querySelector('.scroll-text');
         const textWidth = scrollText.scrollWidth / 2; // Half because we duplicated
-        const duration = Math.max(3, textWidth / 50); // min 3s, 50px/sec
+        const duration = Math.max(1, textWidth / 80); // min 1s, 80px/sec
         el.style.setProperty('--scroll-duration', `${duration}s`);
       }
     });
@@ -68,9 +69,7 @@ window.swim = {
     return this.store.raw.filter((r) => r.ts && r.ts.getFullYear() === year);
   },
 
-  // Get data filtered by year AND search filter
-  // this can control lots of the stuff!
-  // songs okay, podcasts bad.
+  // Get data filtered by year, search filter, AND date range
   getFilteredData: function() {
     let data = this.getYearData(this.store.currentYear);
 
@@ -81,6 +80,12 @@ window.swim = {
         const track = (r.track || "").toLowerCase();
         return artist.includes(filter) || track.includes(filter);
       });
+    }
+
+    // Filter by date range (from timeline zoom)
+    const { start, end } = this.store.dateRange;
+    if (start && end) {
+      data = data.filter((r) => r.ts >= start && r.ts <= end);
     }
 
     return data;
@@ -95,10 +100,34 @@ window.swim = {
   getFilterDescription: function() {
     const year = this.store.currentYear === null ? "All time" : this.store.currentYear;
     const filter = this.store.currentFilter.trim();
-    if (filter) {
-      return `${year} · "${filter}"`;
+    const { start, end } = this.store.dateRange;
+
+    let desc = year;
+    if (start && end) {
+      const fmt = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      desc = `${fmt(start)} – ${fmt(end)}`;
+      if (this.store.currentYear === null) {
+        // Include year in range for multi-year
+        const fmtYear = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        desc = `${fmtYear(start)} – ${fmtYear(end)}`;
+      }
     }
-    return year;
+    if (filter) {
+      desc += ` · "${filter}"`;
+    }
+    return desc;
+  },
+
+  // Set date range filter and re-render
+  setDateRange: function(start, end) {
+    this.store.dateRange = { start, end };
+    this.renderAll();
+  },
+
+  // Clear date range filter
+  clearDateRange: function() {
+    this.store.dateRange = { start: null, end: null };
+    this.renderAll();
   },
 
   aggregateSongs: function(data) {
@@ -294,7 +323,8 @@ window.swim = {
 
   // === Timeline Chart ===
   // Renders a timeline chart for the given records
-  // options: { colorVar, container, width, height, yearData, zoomStart, zoomEnd }
+  // options: { colorVar, container, width, height, yearData, zoomStart, zoomEnd, isGlobal }
+  // isGlobal: if true, zoom updates the global date filter; if false, zoom is local to this chart
   renderTimeline: function(records, options) {
     const s = this;
     const opts = Object.assign({
@@ -304,7 +334,8 @@ window.swim = {
       height: 140,
       yearData: null,
       zoomStart: null,
-      zoomEnd: null
+      zoomEnd: null,
+      isGlobal: false
     }, options);
 
     const container = typeof opts.container === 'string'
@@ -341,9 +372,17 @@ window.swim = {
     }
 
     // Use zoom range if provided, otherwise full range
-    const startDate = opts.zoomStart || fullStartDate;
-    const endDate = opts.zoomEnd || fullEndDate;
-    const isZoomed = opts.zoomStart !== null && opts.zoomEnd !== null;
+    // For global charts, use the store's dateRange
+    let startDate, endDate, isZoomed;
+    if (opts.isGlobal && s.store.dateRange.start && s.store.dateRange.end) {
+      startDate = s.store.dateRange.start;
+      endDate = s.store.dateRange.end;
+      isZoomed = true;
+    } else {
+      startDate = opts.zoomStart || fullStartDate;
+      endDate = opts.zoomEnd || fullEndDate;
+      isZoomed = opts.zoomStart !== null && opts.zoomEnd !== null;
+    }
 
     // Store original options for reset
     container._timelineOpts = {
@@ -653,11 +692,16 @@ window.swim = {
           const zoomStart = new Date(Math.min(dragStartDate, dragEndDate));
           const zoomEnd = new Date(Math.max(dragStartDate, dragEndDate));
 
-          // Re-render with zoomed range
-          s.renderTimeline(records, Object.assign({}, opts, {
-            zoomStart: zoomStart,
-            zoomEnd: zoomEnd
-          }));
+          if (opts.isGlobal) {
+            // Update global date filter - this re-renders all panels
+            s.setDateRange(zoomStart, zoomEnd);
+          } else {
+            // Local zoom - just re-render this chart
+            s.renderTimeline(records, Object.assign({}, opts, {
+              zoomStart: zoomStart,
+              zoomEnd: zoomEnd
+            }));
+          }
         }
 
         dragStartX = null;
@@ -692,7 +736,13 @@ window.swim = {
         }
 
         // Reset zoom on double-click
-        if (isZoomed && container._timelineOpts) {
+        if (opts.isGlobal) {
+          // Clear global date filter if set
+          if (s.store.dateRange.start || s.store.dateRange.end) {
+            s.clearDateRange();
+          }
+        } else if (isZoomed && container._timelineOpts) {
+          // Local reset
           const origOpts = container._timelineOpts;
           s.renderTimeline(origOpts.records, origOpts.baseOptions);
         }
@@ -825,7 +875,13 @@ window.swim = {
     s.resetModalState();
 
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    s.elements.modalDate.textContent = date.toLocaleDateString('en-US', options);
+    const dateStr = date.toLocaleDateString('en-US', options);
+    const filter = s.store.currentFilter.trim();
+    if (filter) {
+      s.elements.modalDate.innerHTML = `${dateStr}<span class="modal-subtitle">Filtered: "${s.escapeHtml(filter)}"</span>`;
+    } else {
+      s.elements.modalDate.textContent = dateStr;
+    }
 
     const totalMs = dayRecords.reduce((sum, r) => sum + r.ms, 0);
     const uniqueTracks = new Set(dayRecords.map(r => `${r.track}|||${r.artist}`).filter(Boolean)).size;
@@ -869,7 +925,7 @@ window.swim = {
     s.resetModalState();
 
     // Title
-    s.elements.modalDate.innerHTML = `${s.escapeHtml(track)}<span class="modal-subtitle">${s.escapeHtml(artist)} · Listening during ${s.getYearLabel()}</span>`;
+    s.elements.modalDate.innerHTML = `${s.escapeHtml(track)}<span class="modal-subtitle">${s.escapeHtml(artist)} · ${s.getFilterDescription()}</span>`;
 
     // Stats
     const totalMs = songRecords.reduce((sum, r) => sum + r.ms, 0);
@@ -914,7 +970,7 @@ window.swim = {
     s.resetModalState();
 
     // Title
-    s.elements.modalDate.innerHTML = `${s.escapeHtml(artistName)}<span class="modal-subtitle">Listening throughout ${s.getYearLabel()}</span>`;
+    s.elements.modalDate.innerHTML = `${s.escapeHtml(artistName)}<span class="modal-subtitle">${s.getFilterDescription()}</span>`;
 
     // Stats
     const totalMs = artistRecords.reduce((sum, r) => sum + r.ms, 0);
@@ -1059,7 +1115,9 @@ document.addEventListener('DOMContentLoaded', function() {
   // Cache DOM elements
   s.elements = {
     fileInput: document.getElementById("selectFiles"),
-    importBtn: document.getElementById("import"),
+    importBtnText: document.getElementById("importBtnText"),
+    infoBtn: document.getElementById("infoBtn"),
+    infoModal: document.getElementById("infoModal"),
     yearSelect: document.getElementById("yearSelect"),
     searchFilter: document.getElementById("searchFilter"),
     emptyState: document.getElementById("emptyState"),
@@ -1107,23 +1165,49 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById("modalForward").onclick = () => s.goForward();
   document.querySelector(".modal-backdrop").onclick = () => s.closeModal();
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") s.closeModal();
+    if (e.key === "Escape") {
+      s.closeModal();
+      s.elements.infoModal.classList.add('hidden');
+    }
   });
 
-  // Data import
-  s.elements.importBtn.onclick = function() {
+  // Info modal toggle
+  s.elements.infoBtn.onclick = function() {
+    s.elements.infoModal.classList.remove('hidden');
+  };
+  document.getElementById("closeInfoModal").onclick = function() {
+    s.elements.infoModal.classList.add('hidden');
+  };
+  s.elements.infoModal.querySelector('.modal-backdrop').onclick = function() {
+    s.elements.infoModal.classList.add('hidden');
+  };
+
+  // Data import - auto-import when files selected
+  s.elements.fileInput.onchange = function() {
     const files = s.elements.fileInput.files;
     if (files.length === 0) return;
+
+    // Show loading state
+    s.elements.importBtnText.textContent = 'Loading...';
+    s.elements.importBtnText.classList.add('loading');
 
     let pending = files.length;
 
     for (const file of files) {
       const reader = new FileReader();
       reader.onload = function(e) {
-        const records = JSON.parse(e.target.result).map(convertRecord);
-        s.store.raw.push(...records);
+        try {
+          const records = JSON.parse(e.target.result).map(convertRecord);
+          s.store.raw.push(...records);
+        } catch (err) {
+          console.error('Failed to parse file:', file.name, err);
+        }
         pending--;
-        if (pending === 0) processData();
+        if (pending === 0) {
+          s.elements.importBtnText.textContent = 'Import';
+          s.elements.importBtnText.classList.remove('loading');
+          processData();
+        }
       };
       reader.readAsText(file);
     }
@@ -1252,6 +1336,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     select.onchange = function() {
       s.store.currentYear = this.value === "all" ? null : parseInt(this.value);
+      // Clear date range when year changes
+      s.store.dateRange = { start: null, end: null };
       s.renderAll();
     };
 

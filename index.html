@@ -23,11 +23,11 @@
     <div class="header-content">
       <h1 class="logo">s(potify) w(rapped) im(proved)</h1>
       <div class="controls">
-        <label class="file-input">
+        <button class="info-btn" id="infoBtn">About</button>
+        <label class="import-btn">
           <input type="file" id="selectFiles" accept=".json" multiple>
-          <span class="file-button">Choose Files</span>
+          <span class="import-btn-text" id="importBtnText">Import</span>
         </label>
-        <button id="import" class="btn btn-primary">Import</button>
         <select id="yearSelect" class="year-select" disabled>
           <option>Year</option>
         </select>
@@ -160,6 +160,40 @@
 
     </div>
   </main>
+
+  <!-- Info Modal -->
+  <div id="infoModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content info-modal-content">
+      <div class="modal-nav">
+        <div class="modal-nav-buttons"></div>
+        <button class="modal-close" id="closeInfoModal">&times;</button>
+      </div>
+      <h2 class="modal-title">About</h2>
+      <div class="info-modal-body">
+        <section>
+          <h3>Getting Your Data & Importing</h3>
+          <p>1. Go to <a href="https://www.spotify.com/account/privacy/" target="_blank">Spotify Privacy Settings</a></p>
+          <p>2. Request your <strong>Extended Streaming History</strong></p>
+          <p>3. Wait for the email (empirically takes 1-2 days)</p>
+          <p>4. Download and unzip the files</p>
+          <p>5. Click <strong>Import</strong> and select all <code>Streaming_History_Audio_*.json</code> files</p>
+        </section>
+        <section>
+          <h3>Privacy</h3>
+          <p>I don't want your data of how you listened to X song Y times at Z time. That's for you to give meaning. I don't know how to make a database anyways, so all your data stays in your browser <3 </p>
+        </section>
+        <section>
+          <h3>Tips</h3>
+          <p>• Use the year dropdown to filter by year, or select "All Years" to see everything</p>
+          <p>• Use the search box to filter by artist or track name</p>
+          <p>• Click and drag on the timeline to zoom into a date range</p>
+          <p>• Double-click the timeline to reset the zoom</p>
+          <p>• Click on any chart element to see more details</p>
+        </section>
+      </div>
+    </div>
+  </div>
 
   <footer class="footer">
     <p>Data stays in your browser. This is a static website! Made with love from rzhu and Claude :) </p>
