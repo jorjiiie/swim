@@ -1,5 +1,5 @@
 // === swim core ===
-window.swim = {
+window.swim = Object.assign(window.swim || {}, {
   // Data store
   store: {
     raw: [],
@@ -7,8 +7,10 @@ window.swim = {
     songDurations: new Map(),
     years: new Set(),
     currentYear: null,  // null means "all years"
-    currentFilter: "",
-    dateRange: { start: null, end: null },  // zoom date filter
+    filterQuery: "",           // Raw filter query string
+    filterAST: null,           // Parsed AST
+    filterPredicate: null,     // Compiled predicate function
+    dateRange: { start: null, end: null },  // zoom date filter (from timeline)
   },
 
   // Modal navigation history
@@ -69,17 +71,17 @@ window.swim = {
     return this.store.raw.filter((r) => r.ts && r.ts.getFullYear() === year);
   },
 
-  // Get data filtered by year, search filter, AND date range
+  // Get data filtered by year, filter predicate, AND date range
+  // Podcasts are filtered out by default (handled in filter AST)
   getFilteredData: function() {
     let data = this.getYearData(this.store.currentYear);
 
-    const filter = this.store.currentFilter.trim().toLowerCase();
-    if (filter) {
-      data = data.filter((r) => {
-        const artist = (r.artist || "").toLowerCase();
-        const track = (r.track || "").toLowerCase();
-        return artist.includes(filter) || track.includes(filter);
-      });
+    // Apply compiled filter predicate if exists
+    if (this.store.filterPredicate) {
+      data = data.filter(this.store.filterPredicate);
+    } else {
+      // No filter query - filter out podcasts by default
+      data = data.filter((r) => r.isPodcast !== true);
     }
 
     // Filter by date range (from timeline zoom)
@@ -91,6 +93,36 @@ window.swim = {
     return data;
   },
 
+  // Set filter from query string
+  setFilter: function(query) {
+    this.store.filterQuery = query;
+    const searchInput = this.elements.searchFilter;
+
+    if (query.trim()) {
+      try {
+        const result = this.filter.createFilter(query);
+        this.store.filterAST = result.ast;
+        this.store.filterPredicate = result.predicate;
+        searchInput.classList.remove('filter-error');
+        this.elements.filterErrorTooltip.classList.remove('visible');
+      } catch (e) {
+        // Show error state on input
+        searchInput.classList.add('filter-error');
+        this.elements.filterErrorTooltip.textContent = e.message;
+        this.elements.filterErrorTooltip.classList.add('visible');
+        // Clear filter on parse error
+        this.store.filterAST = null;
+        this.store.filterPredicate = null;
+      }
+    } else {
+      this.store.filterAST = null;
+      this.store.filterPredicate = null;
+      searchInput.classList.remove('filter-error');
+      this.elements.filterErrorTooltip.classList.remove('visible');
+    }
+    this.renderAll();
+  },
+
   // Get year label for display
   getYearLabel: function() {
     return this.store.currentYear === null ? "all time" : this.store.currentYear;
@@ -99,7 +131,6 @@ window.swim = {
   // Get a description of the current filter for display
   getFilterDescription: function() {
     const year = this.store.currentYear === null ? "All time" : this.store.currentYear;
-    const filter = this.store.currentFilter.trim();
     const { start, end } = this.store.dateRange;
 
     let desc = year;
@@ -112,8 +143,12 @@ window.swim = {
         desc = `${fmtYear(start)} – ${fmtYear(end)}`;
       }
     }
-    if (filter) {
-      desc += ` · "${filter}"`;
+    // Add filter description from AST
+    if (this.store.filterAST) {
+      const filterDesc = this.filter.describe(this.store.filterAST);
+      if (filterDesc) {
+        desc += ` · ${filterDesc}`;
+      }
     }
     return desc;
   },
@@ -876,9 +911,9 @@ window.swim = {
 
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     const dateStr = date.toLocaleDateString('en-US', options);
-    const filter = s.store.currentFilter.trim();
-    if (filter) {
-      s.elements.modalDate.innerHTML = `${dateStr}<span class="modal-subtitle">Filtered: "${s.escapeHtml(filter)}"</span>`;
+    if (s.store.filterAST) {
+      const filterDesc = s.filter.describe(s.store.filterAST);
+      s.elements.modalDate.innerHTML = `${dateStr}<span class="modal-subtitle">${s.escapeHtml(filterDesc)}</span>`;
     } else {
       s.elements.modalDate.textContent = dateStr;
     }
@@ -1095,7 +1130,7 @@ window.swim = {
     const data = this.getFilteredData();
     this.panels.forEach(fn => fn(data));
   },
-};
+});
 
 // === Date Helpers ===
 Date.prototype.getWeekNumber = function() {
@@ -1120,6 +1155,7 @@ document.addEventListener('DOMContentLoaded', function() {
     infoModal: document.getElementById("infoModal"),
     yearSelect: document.getElementById("yearSelect"),
     searchFilter: document.getElementById("searchFilter"),
+    filterErrorTooltip: document.getElementById("filterErrorTooltip"),
     emptyState: document.getElementById("emptyState"),
     dashboard: document.getElementById("dashboardContent"),
     statsTitle: document.getElementById("statsTitle"),
@@ -1220,8 +1256,9 @@ document.addEventListener('DOMContentLoaded', function() {
       ms: raw.ms_played,
       track: isPodcast ? raw.episode_name : raw.master_metadata_track_name,
       artist: isPodcast ? raw.episode_show_name : raw.master_metadata_album_artist_name,
+      isPodcast: isPodcast,
     };
-    }
+  }
 
 
   function inferSongDuration(values, eps = 2000) {
@@ -1320,14 +1357,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Enable and set up search filter
     s.elements.searchFilter.disabled = false;
     s.elements.searchFilter.value = "";
-    s.store.currentFilter = "";
+    s.store.filterQuery = "";
 
     let debounceTimer;
     s.elements.searchFilter.oninput = function() {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
-        s.store.currentFilter = this.value;
-        s.renderAll();
+        s.setFilter(this.value);
       }, 300);
     };
   }

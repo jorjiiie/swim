@@ -226,6 +226,37 @@ body {
   cursor: not-allowed;
 }
 
+.search-filter-wrapper {
+  position: relative;
+}
+
+.search-filter.filter-error,
+.search-filter.filter-error:focus {
+  border-color: #e57373 !important;
+  background: rgba(229, 115, 115, 0.15) !important;
+  box-shadow: 0 0 0 2px rgba(229, 115, 115, 0.3);
+}
+
+.filter-error-tooltip {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: #e57373;
+  color: white;
+  font-size: 12px;
+  border-radius: 6px;
+  z-index: 100;
+  max-width: 300px;
+  word-wrap: break-word;
+}
+
+.filter-error-tooltip.visible {
+  display: block;
+}
+
 /* Dashboard */
 .dashboard {
   flex: 1;

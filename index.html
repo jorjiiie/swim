@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="https://d3js.org/d3.v4.js"></script>
+  <script src="filter.js" defer></script>
   <script src="core.js" defer></script>
   <script src="panels/stats.js" defer></script>
   <script src="panels/overview-timeline.js" defer></script>
@@ -31,7 +32,10 @@
         <select id="yearSelect" class="year-select" disabled>
           <option>Year</option>
         </select>
-        <input type="text" id="searchFilter" class="search-filter" placeholder="Filter by artist, track..." disabled>
+        <div class="search-filter-wrapper">
+          <input type="text" id="searchFilter" class="search-filter" placeholder="Filter by artist, track..." disabled>
+          <div class="filter-error-tooltip" id="filterErrorTooltip"></div>
+        </div>
       </div>
     </div>
   </header>
@@ -184,12 +188,12 @@
           <p>I don't want your data of how you listened to X song Y times at Z time. That's for you to give meaning. I don't know how to make a database anyways, so all your data stays in your browser <3 </p>
         </section>
         <section>
-          <h3>Tips</h3>
-          <p>• Use the year dropdown to filter by year, or select "All Years" to see everything</p>
-          <p>• Use the search box to filter by artist or track name</p>
-          <p>• Click and drag on the timeline to zoom into a date range</p>
-          <p>• Double-click the timeline to reset the zoom</p>
-          <p>• Click on any chart element to see more details</p>
+          <h3>Query Language</h3>
+          <p>The default behavior of typing text is to match substrings of artists or tracks, case-insensitive. If this is not sufficient, you can use a little DSL to make advanced queries.</p>
+          <p>The rough structure of the language is to express queries as compositions of predicates: <code>and</code>, <code>or</code>, <code>not</code>.</p>
+          <p>Some predicates are <code>(artist "Porter Robinson")</code> or <code>(track Forever)</code> or <code>(year >= 2020)</code>. The default behavior is to match exact strings, and you can expand into regex like so <code>(artist /.*rter rob.*/i)</code>.</p>
+          <p>Here's an example query: if we want to get all songs by Porter Robinson, want to play with regex, and want to ignore the song "Trying to Feel Alive", we can use the following query: <code>(and (artist /.*rter rob.*/i) (not (track "Trying to Feel Alive")))</code>.</p>
+          <p>Why? I don't know. But go at it. Full docs can be found in the <a href="https://www.rzhu.cc/thoughts/2025/swim.html" target="_blank">blogpost</a></p>
         </section>
       </div>
     </div>
